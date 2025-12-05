@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { config } from '@/lib/config'
 
 export default function SignupPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -16,9 +18,47 @@ export default function SignupPage() {
   const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState(1)
+  const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [emailChecking, setEmailChecking] = useState(false)
+  const [emailAvailable, setEmailAvailable] = useState(null)
 
   const updateForm = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear field-specific error when user types
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }))
+    }
+    // Clear general error
+    if (error) {
+      setError('')
+    }
+    // Reset email availability when email changes
+    if (field === 'email') {
+      setEmailAvailable(null)
+    }
+  }
+
+  const checkEmailAvailability = async () => {
+    if (!formData.email || !formData.email.includes('@')) return
+    
+    setEmailChecking(true)
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      })
+      const data = await response.json()
+      setEmailAvailable(!data.exists)
+      if (data.exists) {
+        setFieldErrors(prev => ({ ...prev, email: 'An account with this email already exists' }))
+      }
+    } catch (err) {
+      console.error('Email check error:', err)
+    } finally {
+      setEmailChecking(false)
+    }
   }
 
   const passwordStrength = () => {
@@ -37,19 +77,120 @@ export default function SignupPage() {
     return { score: 4, label: 'Strong', color: 'bg-green-500' }
   }
 
+  const validateStep1 = () => {
+    const errors = {}
+    
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required'
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters'
+    }
+    
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required'
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters'
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address'
+    } else if (emailAvailable === false) {
+      errors.email = 'An account with this email already exists'
+    }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep2 = () => {
+    const errors = {}
+    
+    if (!formData.password) {
+      errors.password = 'Password is required'
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters'
+    } else if (!/[a-z]/.test(formData.password) || !/[A-Z]/.test(formData.password)) {
+      errors.password = 'Password must contain upper and lowercase letters'
+    } else if (!/\d/.test(formData.password)) {
+      errors.password = 'Password must contain at least one number'
+    }
+    
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password'
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
+    }
+    
+    if (!agreeToTerms) {
+      errors.terms = 'You must agree to the terms of service'
+    }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     
     if (step === 1) {
+      if (!validateStep1()) return
       setStep(2)
       return
     }
 
+    if (!validateStep2()) return
+
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    // In production, handle registration here
-    window.location.href = '/dashboard'
+    
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.toLowerCase().trim(),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          agreedToTerms: agreeToTerms,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Handle specific field errors
+        if (data.field) {
+          setFieldErrors(prev => ({ ...prev, [data.field]: data.error }))
+          if (data.field === 'email' || data.field === 'firstName' || data.field === 'lastName') {
+            setStep(1)
+          }
+        } else {
+          setError(data.error || 'An error occurred during signup')
+        }
+        return
+      }
+
+      // Success - store token and redirect
+      if (data.token) {
+        localStorage.setItem('authToken', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+      }
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+      
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const strength = passwordStrength()
@@ -102,6 +243,16 @@ export default function SignupPage() {
         </div>
       </div>
 
+      {/* General Error Message */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+          <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         {step === 1 ? (
@@ -117,9 +268,15 @@ export default function SignupPage() {
                   value={formData.firstName}
                   onChange={(e) => updateForm('firstName', e.target.value)}
                   placeholder="John"
-                  required
-                  className="w-full px-4 py-3.5 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                  className={`w-full px-4 py-3.5 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                    fieldErrors.firstName 
+                      ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                      : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+                  }`}
                 />
+                {fieldErrors.firstName && (
+                  <p className="text-red-400 text-xs mt-1.5">{fieldErrors.firstName}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -130,9 +287,15 @@ export default function SignupPage() {
                   value={formData.lastName}
                   onChange={(e) => updateForm('lastName', e.target.value)}
                   placeholder="Doe"
-                  required
-                  className="w-full px-4 py-3.5 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                  className={`w-full px-4 py-3.5 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                    fieldErrors.lastName 
+                      ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                      : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+                  }`}
                 />
+                {fieldErrors.lastName && (
+                  <p className="text-red-400 text-xs mt-1.5">{fieldErrors.lastName}</p>
+                )}
               </div>
             </div>
 
@@ -146,14 +309,45 @@ export default function SignupPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => updateForm('email', e.target.value)}
+                  onBlur={checkEmailAvailability}
                   placeholder="name@example.com"
-                  required
-                  className="w-full px-4 py-3.5 pl-11 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                  className={`w-full px-4 py-3.5 pl-11 pr-11 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                    fieldErrors.email 
+                      ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                      : emailAvailable === true 
+                        ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/20'
+                        : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+                  }`}
                 />
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
+                {/* Email Status Indicator */}
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {emailChecking && (
+                    <svg className="w-5 h-5 text-dark-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {!emailChecking && emailAvailable === true && (
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {!emailChecking && emailAvailable === false && (
+                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
               </div>
+              {fieldErrors.email && (
+                <p className="text-red-400 text-xs mt-1.5">{fieldErrors.email}</p>
+              )}
+              {emailAvailable === true && !fieldErrors.email && (
+                <p className="text-green-400 text-xs mt-1.5">Email is available</p>
+              )}
             </div>
           </>
         ) : (
@@ -169,9 +363,12 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => updateForm('password', e.target.value)}
                   placeholder="Create a strong password"
-                  required
                   minLength={8}
-                  className="w-full px-4 py-3.5 pl-11 pr-11 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                  className={`w-full px-4 py-3.5 pl-11 pr-11 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                    fieldErrors.password 
+                      ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                      : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+                  }`}
                 />
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -193,6 +390,9 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-red-400 text-xs mt-1.5">{fieldErrors.password}</p>
+              )}
               
               {/* Password Strength */}
               {formData.password && (
@@ -239,38 +439,48 @@ export default function SignupPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => updateForm('confirmPassword', e.target.value)}
                   placeholder="Confirm your password"
-                  required
                   className={`w-full px-4 py-3.5 pl-11 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
-                    formData.confirmPassword && formData.password !== formData.confirmPassword
+                    fieldErrors.confirmPassword
                       ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
-                      : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+                      : formData.confirmPassword && formData.password === formData.confirmPassword
+                        ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/20'
+                        : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
                   }`}
                 />
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-red-400 text-xs mt-2">Passwords do not match</p>
+              {fieldErrors.confirmPassword && (
+                <p className="text-red-400 text-xs mt-1.5">{fieldErrors.confirmPassword}</p>
               )}
             </div>
 
             {/* Terms */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeToTerms}
-                onChange={(e) => setAgreeToTerms(e.target.checked)}
-                required
-                className="w-4 h-4 mt-0.5 rounded border-white/20 bg-dark-900 text-primary-500 focus:ring-primary-500/20 focus:ring-offset-0"
-              />
-              <span className="text-sm text-dark-400">
-                I agree to the{' '}
-                <Link href="#" className="text-primary-400 hover:text-primary-300">Terms of Service</Link>
-                {' '}and{' '}
-                <Link href="#" className="text-primary-400 hover:text-primary-300">Privacy Policy</Link>
-              </span>
-            </label>
+            <div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreeToTerms}
+                  onChange={(e) => {
+                    setAgreeToTerms(e.target.checked)
+                    if (fieldErrors.terms) {
+                      setFieldErrors(prev => ({ ...prev, terms: '' }))
+                    }
+                  }}
+                  className="w-4 h-4 mt-0.5 rounded border-white/20 bg-dark-900 text-primary-500 focus:ring-primary-500/20 focus:ring-offset-0"
+                />
+                <span className="text-sm text-dark-400">
+                  I agree to the{' '}
+                  <Link href="#" className="text-primary-400 hover:text-primary-300">Terms of Service</Link>
+                  {' '}and{' '}
+                  <Link href="#" className="text-primary-400 hover:text-primary-300">Privacy Policy</Link>
+                </span>
+              </label>
+              {fieldErrors.terms && (
+                <p className="text-red-400 text-xs mt-1.5 ml-7">{fieldErrors.terms}</p>
+              )}
+            </div>
           </>
         )}
 
@@ -280,7 +490,8 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="px-6 py-4 rounded-xl font-semibold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all"
+              disabled={isLoading}
+              className="px-6 py-4 rounded-xl font-semibold bg-white/5 text-white border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Back
             </button>
@@ -358,4 +569,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

@@ -2,22 +2,90 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { config } from '@/lib/config'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  const clearErrors = () => {
+    setError('')
+    setFieldErrors({})
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    clearErrors()
+
+    // Client-side validation
+    const errors = {}
+    if (!email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+    if (!password) {
+      errors.password = 'Password is required'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    // In production, handle authentication here
-    window.location.href = '/dashboard'
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Handle specific field errors
+        if (data.field) {
+          setFieldErrors(prev => ({ ...prev, [data.field]: data.error }))
+        } else {
+          setError(data.error || 'Invalid email or password')
+        }
+        return
+      }
+
+      // Success - store token and user data
+      if (data.token) {
+        if (rememberMe) {
+          localStorage.setItem('authToken', data.token)
+          localStorage.setItem('user', JSON.stringify(data.user))
+        } else {
+          sessionStorage.setItem('authToken', data.token)
+          sessionStorage.setItem('user', JSON.stringify(data.user))
+        }
+      }
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -49,6 +117,16 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {/* General Error Message */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+          <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
@@ -60,15 +138,25 @@ export default function LoginPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }))
+                if (error) setError('')
+              }}
               placeholder="name@example.com"
-              required
-              className="w-full px-4 py-3.5 pl-11 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              className={`w-full px-4 py-3.5 pl-11 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                fieldErrors.email
+                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                  : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+              }`}
             />
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
+          {fieldErrors.email && (
+            <p className="text-red-400 text-xs mt-1.5">{fieldErrors.email}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -80,10 +168,17 @@ export default function LoginPage() {
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: '' }))
+                if (error) setError('')
+              }}
               placeholder="Enter your password"
-              required
-              className="w-full px-4 py-3.5 pl-11 pr-11 bg-dark-900/50 border border-white/10 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              className={`w-full px-4 py-3.5 pl-11 pr-11 bg-dark-900/50 border rounded-xl text-white placeholder-dark-500 focus:outline-none focus:ring-2 transition-all ${
+                fieldErrors.password
+                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20'
+                  : 'border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20'
+              }`}
             />
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -105,6 +200,9 @@ export default function LoginPage() {
               )}
             </button>
           </div>
+          {fieldErrors.password && (
+            <p className="text-red-400 text-xs mt-1.5">{fieldErrors.password}</p>
+          )}
         </div>
 
         {/* Remember Me & Forgot Password */}
@@ -190,4 +288,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
