@@ -34,22 +34,21 @@ export default function CTA() {
             Sign up today and get $10 in free Bitcoin.
           </p>
 
-          {/* Email Signup Form */}
-          <form className="max-w-md mx-auto mb-8">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-5 py-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-dark-400 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all duration-300"
-              />
-              <button
-                type="submit"
-                className="btn-primary whitespace-nowrap"
-              >
-                <span>Get Started</span>
-              </button>
-            </div>
-          </form>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <a
+              href="/signup"
+              className="btn-primary w-full sm:w-auto"
+            >
+              <span>Create Free Account</span>
+            </a>
+            <a
+              href="/login"
+              className="btn-secondary w-full sm:w-auto"
+            >
+              Sign In
+            </a>
+          </div>
 
           {/* Trust Badges */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-dark-400 text-sm">

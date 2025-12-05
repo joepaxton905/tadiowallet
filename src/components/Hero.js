@@ -88,7 +88,7 @@ export default function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-slide-up animation-delay-400">
-            <a href="#" className="btn-primary w-full sm:w-auto">
+            <a href="/signup" className="btn-primary w-full sm:w-auto">
               <span>Start Trading Now</span>
             </a>
             <a href="#how-it-works" className="btn-secondary w-full sm:w-auto flex items-center justify-center gap-2">

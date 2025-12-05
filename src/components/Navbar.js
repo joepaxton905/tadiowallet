@@ -83,13 +83,13 @@ export default function Navbar() {
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <a
-              href="#"
+              href="/login"
               className="px-5 py-2.5 text-dark-200 hover:text-white transition-colors duration-200 text-sm font-medium"
             >
               Sign In
             </a>
             <a
-              href="#"
+              href="/signup"
               className="relative px-5 py-2.5 rounded-xl font-medium text-dark-950 text-sm overflow-hidden group"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-primary-400 to-accent-500 transition-all duration-300" />
@@ -149,13 +149,13 @@ export default function Navbar() {
           ))}
           <div className="pt-4 space-y-3 border-t border-white/10">
             <a
-              href="#"
+              href="/login"
               className="block px-4 py-3 text-center text-dark-200 hover:text-white transition-colors"
             >
               Sign In
             </a>
             <a
-              href="#"
+              href="/signup"
               className="block px-4 py-3 text-center rounded-xl font-medium text-dark-950 bg-gradient-to-r from-primary-400 to-accent-500"
             >
               Get Started
