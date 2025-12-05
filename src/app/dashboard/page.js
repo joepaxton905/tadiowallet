@@ -1,13 +1,74 @@
 'use client'
 
-import { portfolioData } from '@/lib/mockData'
+import { useMemo } from 'react'
+import { useMarketData } from '@/hooks/useCryptoPrices'
+import { formatPrice } from '@/lib/crypto'
 import PortfolioChart from '@/components/dashboard/PortfolioChart'
 import QuickActions from '@/components/dashboard/QuickActions'
 import AssetList from '@/components/dashboard/AssetList'
 import RecentTransactions from '@/components/dashboard/RecentTransactions'
 import MarketOverview from '@/components/dashboard/MarketOverview'
 
+// Mock holdings - in production this would come from user data
+const mockHoldings = {
+  BTC: 1.45,
+  ETH: 12.5,
+  SOL: 150,
+  ADA: 10000,
+  MATIC: 5000,
+  AVAX: 100,
+  LINK: 200,
+  DOT: 300,
+}
+
 export default function DashboardPage() {
+  const { data: marketData, loading } = useMarketData(
+    ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT'],
+    30000
+  )
+
+  // Calculate portfolio values from live prices
+  const portfolioData = useMemo(() => {
+    if (!marketData.length) {
+      return {
+        totalBalance: 0,
+        dayChange: 0,
+        dayChangePercent: 0,
+        weekChange: 0,
+        weekChangePercent: 0,
+        assetCount: Object.keys(mockHoldings).length,
+      }
+    }
+
+    let totalValue = 0
+    let totalPreviousValue = 0
+
+    marketData.forEach(coin => {
+      const holdings = mockHoldings[coin.symbol] || 0
+      const currentValue = holdings * coin.price
+      const previousValue = currentValue / (1 + coin.priceChange24h / 100)
+      
+      totalValue += currentValue
+      totalPreviousValue += previousValue
+    })
+
+    const dayChange = totalValue - totalPreviousValue
+    const dayChangePercent = totalPreviousValue > 0 ? (dayChange / totalPreviousValue) * 100 : 0
+
+    // Mock week change (in production, would need historical data)
+    const weekChangePercent = 7.12
+    const weekChange = totalValue * (weekChangePercent / 100)
+
+    return {
+      totalBalance: totalValue,
+      dayChange,
+      dayChangePercent,
+      weekChange,
+      weekChangePercent,
+      assetCount: marketData.filter(c => mockHoldings[c.symbol]).length,
+    }
+  }, [marketData])
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header - Hidden on mobile as MobileHeader shows title */}
@@ -18,40 +79,56 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 text-sm text-dark-400">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          Last updated: Just now
+          Live prices
         </div>
       </div>
 
       {/* Mobile Welcome Card */}
       <div className="lg:hidden glass-card p-4">
-        <p className="text-dark-400 text-sm">Good morning,</p>
-        <p className="text-lg font-semibold text-white">John Doe</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-dark-400 text-sm">Good morning,</p>
+            <p className="text-lg font-semibold text-white">John Doe</p>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs text-green-400">Live</span>
+          </div>
+        </div>
       </div>
 
       {/* Portfolio Balance Card - Mobile Optimized */}
       <div className="glass-card p-4 sm:p-6 lg:hidden">
         <p className="text-dark-400 text-sm mb-1">Total Balance</p>
-        <p className="text-3xl sm:text-4xl font-heading font-bold text-white mb-2">
-          ${portfolioData.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </p>
+        {loading ? (
+          <div className="h-10 w-48 bg-dark-700 rounded animate-pulse mb-2" />
+        ) : (
+          <p className="text-3xl sm:text-4xl font-heading font-bold text-white mb-2">
+            ${formatPrice(portfolioData.totalBalance)}
+          </p>
+        )}
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm ${
-            portfolioData.totalBalanceChange >= 0 
-              ? 'bg-green-400/10 text-green-400' 
-              : 'bg-red-400/10 text-red-400'
-          }`}>
-            {portfolioData.totalBalanceChange >= 0 ? (
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            ) : (
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            )}
-            {portfolioData.totalBalanceChange >= 0 ? '+' : ''}{portfolioData.totalBalanceChange}%
-          </span>
-          <span className="text-dark-500 text-sm">this month</span>
+          {loading ? (
+            <div className="h-6 w-24 bg-dark-700 rounded animate-pulse" />
+          ) : (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm ${
+              portfolioData.dayChangePercent >= 0 
+                ? 'bg-green-400/10 text-green-400' 
+                : 'bg-red-400/10 text-red-400'
+            }`}>
+              {portfolioData.dayChangePercent >= 0 ? (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+              {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent.toFixed(2)}%
+            </span>
+          )}
+          <span className="text-dark-500 text-sm">24h</span>
         </div>
       </div>
 
@@ -67,14 +144,24 @@ export default function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-heading font-bold text-white mb-1">
-            ${portfolioData.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
+          {loading ? (
+            <div className="h-9 w-40 bg-dark-700 rounded animate-pulse mb-1" />
+          ) : (
+            <p className="text-3xl font-heading font-bold text-white mb-1">
+              ${formatPrice(portfolioData.totalBalance)}
+            </p>
+          )}
           <div className="flex items-center gap-1">
-            <span className={`text-sm ${portfolioData.totalBalanceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {portfolioData.totalBalanceChange >= 0 ? '+' : ''}{portfolioData.totalBalanceChange}%
-            </span>
-            <span className="text-dark-500 text-sm">this month</span>
+            {loading ? (
+              <div className="h-4 w-20 bg-dark-700 rounded animate-pulse" />
+            ) : (
+              <>
+                <span className={`text-sm ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent.toFixed(2)}%
+                </span>
+                <span className="text-dark-500 text-sm">today</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -96,14 +183,22 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          <p className={`text-3xl font-heading font-bold ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {portfolioData.dayChangePercent >= 0 ? '+' : ''}${portfolioData.dayChange.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
+          {loading ? (
+            <div className="h-9 w-32 bg-dark-700 rounded animate-pulse mb-1" />
+          ) : (
+            <p className={`text-3xl font-heading font-bold ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {portfolioData.dayChange >= 0 ? '+' : ''}${formatPrice(Math.abs(portfolioData.dayChange))}
+            </p>
+          )}
           <div className="flex items-center gap-1">
-            <span className={`text-sm ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent}%
-            </span>
-            <span className="text-dark-500 text-sm">vs yesterday</span>
+            {!loading && (
+              <>
+                <span className={`text-sm ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent.toFixed(2)}%
+                </span>
+                <span className="text-dark-500 text-sm">vs yesterday</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -111,20 +206,26 @@ export default function DashboardPage() {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-dark-400 text-sm">7d Change</span>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              portfolioData.weekChangePercent >= 0 ? 'bg-green-400/20' : 'bg-red-400/20'
-            }`}>
+            <div className="w-10 h-10 rounded-xl bg-green-400/20 flex items-center justify-center">
               <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-heading font-bold text-green-400">
-            +${portfolioData.weekChange.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
+          {loading ? (
+            <div className="h-9 w-32 bg-dark-700 rounded animate-pulse mb-1" />
+          ) : (
+            <p className="text-3xl font-heading font-bold text-green-400">
+              +${formatPrice(portfolioData.weekChange)}
+            </p>
+          )}
           <div className="flex items-center gap-1">
-            <span className="text-sm text-green-400">+{portfolioData.weekChangePercent}%</span>
-            <span className="text-dark-500 text-sm">this week</span>
+            {!loading && (
+              <>
+                <span className="text-sm text-green-400">+{portfolioData.weekChangePercent}%</span>
+                <span className="text-dark-500 text-sm">this week</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -139,10 +240,10 @@ export default function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-heading font-bold text-white">8</p>
+          <p className="text-3xl font-heading font-bold text-white">{portfolioData.assetCount}</p>
           <div className="flex items-center gap-1">
-            <span className="text-sm text-primary-400">+2 new</span>
-            <span className="text-dark-500 text-sm">this month</span>
+            <span className="text-sm text-primary-400">Diversified</span>
+            <span className="text-dark-500 text-sm">portfolio</span>
           </div>
         </div>
       </div>
@@ -154,9 +255,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-2 lg:hidden">
         <div className="glass-card p-3 text-center">
           <p className="text-xs text-dark-400 mb-1">24h</p>
-          <p className={`text-sm font-semibold ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent}%
-          </p>
+          {loading ? (
+            <div className="h-4 w-12 bg-dark-700 rounded animate-pulse mx-auto" />
+          ) : (
+            <p className={`text-sm font-semibold ${portfolioData.dayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {portfolioData.dayChangePercent >= 0 ? '+' : ''}{portfolioData.dayChangePercent.toFixed(2)}%
+            </p>
+          )}
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-xs text-dark-400 mb-1">7d</p>
@@ -164,7 +269,7 @@ export default function DashboardPage() {
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-xs text-dark-400 mb-1">Assets</p>
-          <p className="text-sm font-semibold text-white">8</p>
+          <p className="text-sm font-semibold text-white">{portfolioData.assetCount}</p>
         </div>
       </div>
 

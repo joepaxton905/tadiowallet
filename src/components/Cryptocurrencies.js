@@ -1,19 +1,14 @@
 'use client'
 
-import { config } from '@/lib/config'
-
-const cryptoData = [
-  { name: 'Bitcoin', symbol: 'BTC', price: '$43,250.00', change: '+2.45%', positive: true, color: '#F7931A', icon: '₿' },
-  { name: 'Ethereum', symbol: 'ETH', price: '$2,280.50', change: '+5.12%', positive: true, color: '#627EEA', icon: 'Ξ' },
-  { name: 'Solana', symbol: 'SOL', price: '$98.75', change: '-1.23%', positive: false, color: '#9945FF', icon: '◎' },
-  { name: 'Cardano', symbol: 'ADA', price: '$0.52', change: '+3.78%', positive: true, color: '#0033AD', icon: '₳' },
-  { name: 'Polygon', symbol: 'MATIC', price: '$0.89', change: '+4.56%', positive: true, color: '#8247E5', icon: '⬡' },
-  { name: 'Avalanche', symbol: 'AVAX', price: '$35.20', change: '-0.89%', positive: false, color: '#E84142', icon: '◆' },
-  { name: 'Chainlink', symbol: 'LINK', price: '$14.85', change: '+6.32%', positive: true, color: '#2A5ADA', icon: '⬢' },
-  { name: 'Polkadot', symbol: 'DOT', price: '$7.45', change: '+1.98%', positive: true, color: '#E6007A', icon: '●' },
-]
+import { useMarketData } from '@/hooks/useCryptoPrices'
+import { formatPrice } from '@/lib/crypto'
 
 export default function Cryptocurrencies() {
+  const { data: cryptoData, loading } = useMarketData(
+    ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT'],
+    60000 // Refresh every 60 seconds
+  )
+
   return (
     <section id="cryptocurrencies" className="relative section-padding overflow-hidden">
       {/* Background */}
@@ -24,13 +19,13 @@ export default function Cryptocurrencies() {
         {/* Section Header */}
         <div className="text-center mb-16">
           <span className="inline-block px-4 py-2 rounded-full bg-primary-500/10 text-primary-400 text-sm font-medium mb-6">
-            Supported Assets
+            Live Prices
           </span>
           <h2 className="section-heading text-white mb-6">
             Trade <span className="gradient-text">150+ Cryptocurrencies</span>
           </h2>
           <p className="section-subheading">
-            Access the most popular digital assets and discover emerging tokens. 
+            Access the most popular digital assets with real-time pricing. 
             New cryptocurrencies are added regularly.
           </p>
         </div>
@@ -44,59 +39,93 @@ export default function Cryptocurrencies() {
           {/* Scrolling Ticker */}
           <div className="overflow-hidden">
             <div className="flex animate-[scroll_30s_linear_infinite] hover:[animation-play-state:paused]">
-              {[...cryptoData, ...cryptoData].map((crypto, index) => (
-                <div
-                  key={index}
-                  className="flex-shrink-0 mx-3"
-                >
-                  <div className="glass-card px-6 py-4 flex items-center gap-4 min-w-[200px]">
-                    <div 
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                      style={{ backgroundColor: crypto.color + '20', color: crypto.color }}
-                    >
-                      {crypto.icon}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">{crypto.symbol}</span>
-                        <span className={`text-xs ${crypto.positive ? 'text-green-400' : 'text-red-400'}`}>
-                          {crypto.change}
-                        </span>
+              {loading ? (
+                // Loading skeleton
+                [...Array(8)].map((_, index) => (
+                  <div key={index} className="flex-shrink-0 mx-3">
+                    <div className="glass-card px-6 py-4 flex items-center gap-4 min-w-[200px] animate-pulse">
+                      <div className="w-10 h-10 rounded-xl bg-dark-700" />
+                      <div>
+                        <div className="h-4 w-16 bg-dark-700 rounded mb-2" />
+                        <div className="h-3 w-20 bg-dark-700 rounded" />
                       </div>
-                      <span className="text-sm text-dark-400">{crypto.price}</span>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                [...cryptoData, ...cryptoData].map((crypto, index) => (
+                  <div key={index} className="flex-shrink-0 mx-3">
+                    <div className="glass-card px-6 py-4 flex items-center gap-4 min-w-[200px]">
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+                        style={{ backgroundColor: crypto.color + '20', color: crypto.color }}
+                      >
+                        {crypto.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{crypto.symbol}</span>
+                          <span className={`text-xs ${crypto.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {crypto.priceChange24h >= 0 ? '+' : ''}{crypto.priceChange24h.toFixed(2)}%
+                          </span>
+                        </div>
+                        <span className="text-sm text-dark-400">${formatPrice(crypto.price)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* Crypto Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {cryptoData.map((crypto, index) => (
-            <div
-              key={index}
-              className="glass-card-hover p-6 group cursor-pointer"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110"
-                  style={{ backgroundColor: crypto.color + '20', color: crypto.color }}
-                >
-                  {crypto.icon}
+          {loading ? (
+            // Loading skeleton
+            [...Array(8)].map((_, index) => (
+              <div key={index} className="glass-card p-6 animate-pulse">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-dark-700" />
+                  <div className="h-4 w-12 bg-dark-700 rounded" />
                 </div>
-                <span className={`text-sm font-medium ${crypto.positive ? 'text-green-400' : 'text-red-400'}`}>
-                  {crypto.change}
-                </span>
+                <div className="h-5 w-24 bg-dark-700 rounded mb-2" />
+                <div className="h-4 w-32 bg-dark-700 rounded" />
               </div>
-              <h3 className="font-semibold text-white mb-1">{crypto.name}</h3>
-              <div className="flex items-center justify-between">
-                <span className="text-dark-400 text-sm">{crypto.symbol}</span>
-                <span className="text-white font-medium">{crypto.price}</span>
+            ))
+          ) : (
+            cryptoData.map((crypto, index) => (
+              <div
+                key={index}
+                className="glass-card-hover p-6 group cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110"
+                    style={{ backgroundColor: crypto.color + '20', color: crypto.color }}
+                  >
+                    {crypto.icon}
+                  </div>
+                  <span className={`text-sm font-medium ${crypto.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {crypto.priceChange24h >= 0 ? '+' : ''}{crypto.priceChange24h.toFixed(2)}%
+                  </span>
+                </div>
+                <h3 className="font-semibold text-white mb-1">{crypto.name}</h3>
+                <div className="flex items-center justify-between">
+                  <span className="text-dark-400 text-sm">{crypto.symbol}</span>
+                  <span className="text-white font-medium">${formatPrice(crypto.price)}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
+        </div>
+
+        {/* Live indicator */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-sm text-green-400">Live prices from CoinGecko</span>
+          </div>
         </div>
 
         {/* View All Link */}
@@ -127,4 +156,3 @@ export default function Cryptocurrencies() {
     </section>
   )
 }
-

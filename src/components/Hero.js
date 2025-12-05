@@ -1,8 +1,12 @@
 'use client'
 
 import { config } from '@/lib/config'
+import { useSimplePrices } from '@/hooks/useCryptoPrices'
+import { formatPrice } from '@/lib/crypto'
 
 export default function Hero() {
+  const { prices, loading } = useSimplePrices(['BTC', 'ETH', 'SOL'], 30000)
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated Background */}
@@ -114,7 +118,7 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Hero Image / App Preview */}
+        {/* Hero Image / App Preview with Live Prices */}
         <div className="mt-20 relative animate-slide-up animation-delay-800">
           <div className="relative max-w-5xl mx-auto">
             {/* Glow Effect */}
@@ -134,15 +138,9 @@ export default function Hero() {
                     <span className="text-sm text-dark-400">{config.companyName} Dashboard</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-xs text-green-400">Live</span>
                     </div>
                   </div>
                 </div>
@@ -161,24 +159,34 @@ export default function Hero() {
                     </span>
                   </div>
                   
-                  {/* Asset List Preview */}
+                  {/* Live Asset List */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {[
-                      { name: 'Bitcoin', symbol: 'BTC', price: '$43,250', change: '+2.4%', positive: true },
-                      { name: 'Ethereum', symbol: 'ETH', price: '$2,280', change: '+5.1%', positive: true },
-                      { name: 'Solana', symbol: 'SOL', price: '$98.50', change: '-1.2%', positive: false },
-                    ].map((asset, index) => (
-                      <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/5">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-white font-medium">{asset.symbol}</span>
-                          <span className={`text-sm ${asset.positive ? 'text-accent-400' : 'text-red-400'}`}>
-                            {asset.change}
-                          </span>
+                    {loading ? (
+                      // Loading skeleton
+                      [...Array(3)].map((_, index) => (
+                        <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/5 animate-pulse">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="h-4 w-12 bg-dark-700 rounded" />
+                            <div className="h-4 w-16 bg-dark-700 rounded" />
+                          </div>
+                          <div className="h-8 w-24 bg-dark-700 rounded mb-1" />
+                          <div className="h-3 w-16 bg-dark-700 rounded" />
                         </div>
-                        <p className="text-2xl font-heading font-bold text-white">{asset.price}</p>
-                        <p className="text-dark-400 text-sm">{asset.name}</p>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      prices.map((coin, index) => (
+                        <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/5">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-white font-medium">{coin.symbol}</span>
+                            <span className={`text-sm ${coin.priceChange24h >= 0 ? 'text-accent-400' : 'text-red-400'}`}>
+                              {coin.priceChange24h >= 0 ? '+' : ''}{coin.priceChange24h.toFixed(2)}%
+                            </span>
+                          </div>
+                          <p className="text-2xl font-heading font-bold text-white">${formatPrice(coin.price)}</p>
+                          <p className="text-dark-400 text-sm">{coin.name}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -196,4 +204,3 @@ export default function Hero() {
     </section>
   )
 }
-

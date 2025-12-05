@@ -2,21 +2,11 @@
 
 import { useState } from 'react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
-import { marketData, priceHistory } from '@/lib/mockData'
+import { useMarketData } from '@/hooks/useCryptoPrices'
+import { formatPrice, formatLargeNumber } from '@/lib/crypto'
 import Link from 'next/link'
 
-const cryptoIcons = {
-  BTC: { icon: '₿', color: '#F7931A' },
-  ETH: { icon: 'Ξ', color: '#627EEA' },
-  SOL: { icon: '◎', color: '#9945FF' },
-  BNB: { icon: '◆', color: '#F3BA2F' },
-  XRP: { icon: '✕', color: '#23292F' },
-  ADA: { icon: '₳', color: '#0033AD' },
-  AVAX: { icon: '◆', color: '#E84142' },
-  DOGE: { icon: 'Ð', color: '#C2A633' },
-}
-
-// Mock mini chart data
+// Mock mini chart data generator
 const generateMiniChartData = (positive) => {
   const data = []
   let value = 50
@@ -33,6 +23,11 @@ export default function MarketsPage() {
   const [sortOrder, setSortOrder] = useState('desc')
   const [searchTerm, setSearchTerm] = useState('')
 
+  const { data: marketData, loading } = useMarketData(
+    ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'MATIC', 'ATOM'],
+    30000
+  )
+
   const sortedData = [...marketData]
     .filter(coin => 
       coin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,14 +39,21 @@ export default function MarketsPage() {
         aVal = a.price
         bVal = b.price
       } else if (sortBy === 'change') {
-        aVal = a.change
-        bVal = b.change
+        aVal = a.priceChange24h
+        bVal = b.priceChange24h
       } else {
-        aVal = parseFloat(a.marketCap.replace(/[^0-9.]/g, ''))
-        bVal = parseFloat(b.marketCap.replace(/[^0-9.]/g, ''))
+        aVal = a.marketCap || 0
+        bVal = b.marketCap || 0
       }
       return sortOrder === 'desc' ? bVal - aVal : aVal - bVal
     })
+
+  // Calculate total market stats
+  const totalMarketCap = marketData.reduce((sum, coin) => sum + (coin.marketCap || 0), 0)
+  const totalVolume = marketData.reduce((sum, coin) => sum + (coin.volume || 0), 0)
+  const btcDominance = marketData.find(c => c.symbol === 'BTC')
+    ? ((marketData.find(c => c.symbol === 'BTC').marketCap / totalMarketCap) * 100).toFixed(1)
+    : '0'
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -63,33 +65,44 @@ export default function MarketsPage() {
         </div>
       </div>
 
+      {/* Live indicator */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-sm text-green-400">Live prices</span>
+        </div>
+        <span className="text-xs text-dark-500">Updates every 30s</span>
+      </div>
+
       {/* Market Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card p-4">
-          <p className="text-dark-400 text-sm mb-1">Market Cap</p>
-          <p className="text-xl font-heading font-bold text-white">$1.82T</p>
-          <p className="text-green-400 text-sm">+2.34%</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="glass-card p-3 sm:p-4">
+          <p className="text-dark-400 text-xs sm:text-sm mb-1">Total Market Cap</p>
+          <p className="text-lg sm:text-xl font-heading font-bold text-white">
+            {loading ? '...' : formatLargeNumber(totalMarketCap)}
+          </p>
         </div>
-        <div className="glass-card p-4">
-          <p className="text-dark-400 text-sm mb-1">24h Volume</p>
-          <p className="text-xl font-heading font-bold text-white">$76.5B</p>
-          <p className="text-green-400 text-sm">+5.12%</p>
+        <div className="glass-card p-3 sm:p-4">
+          <p className="text-dark-400 text-xs sm:text-sm mb-1">24h Volume</p>
+          <p className="text-lg sm:text-xl font-heading font-bold text-white">
+            {loading ? '...' : formatLargeNumber(totalVolume)}
+          </p>
         </div>
-        <div className="glass-card p-4">
-          <p className="text-dark-400 text-sm mb-1">BTC Dominance</p>
-          <p className="text-xl font-heading font-bold text-white">52.4%</p>
-          <p className="text-red-400 text-sm">-0.32%</p>
+        <div className="glass-card p-3 sm:p-4">
+          <p className="text-dark-400 text-xs sm:text-sm mb-1">BTC Dominance</p>
+          <p className="text-lg sm:text-xl font-heading font-bold text-white">
+            {loading ? '...' : `${btcDominance}%`}
+          </p>
         </div>
-        <div className="glass-card p-4">
-          <p className="text-dark-400 text-sm mb-1">Active Coins</p>
-          <p className="text-xl font-heading font-bold text-white">12,847</p>
-          <p className="text-dark-400 text-sm">+28 today</p>
+        <div className="glass-card p-3 sm:p-4">
+          <p className="text-dark-400 text-xs sm:text-sm mb-1">Active Coins</p>
+          <p className="text-lg sm:text-xl font-heading font-bold text-white">{marketData.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="glass-card p-3 sm:p-4">
+        <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
           {/* Search */}
           <div className="flex-1 relative">
             <input
@@ -109,7 +122,7 @@ export default function MarketsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 bg-dark-800/50 border border-white/5 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
+              className="px-4 py-2.5 bg-dark-800/50 border border-white/5 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50"
             >
               <option value="marketCap">Market Cap</option>
               <option value="price">Price</option>
@@ -133,93 +146,121 @@ export default function MarketsPage() {
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs text-dark-400 border-b border-white/5">
-                <th className="px-6 py-4 font-medium">#</th>
-                <th className="px-6 py-4 font-medium">Name</th>
-                <th className="px-6 py-4 font-medium">Price</th>
-                <th className="px-6 py-4 font-medium">24h Change</th>
-                <th className="px-6 py-4 font-medium hidden md:table-cell">7d Chart</th>
-                <th className="px-6 py-4 font-medium hidden sm:table-cell">Volume (24h)</th>
-                <th className="px-6 py-4 font-medium hidden lg:table-cell">Market Cap</th>
-                <th className="px-6 py-4 font-medium text-right">Action</th>
+                <th className="px-4 sm:px-6 py-4 font-medium">#</th>
+                <th className="px-4 sm:px-6 py-4 font-medium">Name</th>
+                <th className="px-4 sm:px-6 py-4 font-medium">Price</th>
+                <th className="px-4 sm:px-6 py-4 font-medium">24h</th>
+                <th className="px-4 sm:px-6 py-4 font-medium hidden md:table-cell">7d Chart</th>
+                <th className="px-4 sm:px-6 py-4 font-medium hidden sm:table-cell">Volume</th>
+                <th className="px-4 sm:px-6 py-4 font-medium hidden lg:table-cell">Market Cap</th>
+                <th className="px-4 sm:px-6 py-4 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {sortedData.map((coin, index) => {
-                const iconData = cryptoIcons[coin.symbol] || { icon: '●', color: '#888' }
-                const chartData = generateMiniChartData(coin.change >= 0)
-                return (
-                  <tr key={coin.symbol} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 text-dark-400">{index + 1}</td>
-                    <td className="px-6 py-4">
+              {loading ? (
+                // Loading skeleton
+                [...Array(8)].map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-4 sm:px-6 py-4"><div className="h-4 w-4 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
-                          style={{ backgroundColor: iconData.color + '20', color: iconData.color }}
-                        >
-                          {iconData.icon}
-                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-dark-700" />
                         <div>
-                          <p className="font-medium text-white">{coin.name}</p>
-                          <p className="text-xs text-dark-400">{coin.symbol}</p>
+                          <div className="h-4 w-20 bg-dark-700 rounded mb-1" />
+                          <div className="h-3 w-12 bg-dark-700 rounded" />
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-white font-medium">
-                        ${coin.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 ${coin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {coin.change >= 0 ? (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        )}
-                        {Math.abs(coin.change)}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      <div className="w-24 h-10">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={chartData}>
-                            <Line
-                              type="monotone"
-                              dataKey="value"
-                              stroke={coin.change >= 0 ? '#22c55e' : '#ef4444'}
-                              strokeWidth={1.5}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
-                      <span className="text-dark-300">${coin.volume}</span>
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      <span className="text-dark-300">${coin.marketCap}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/dashboard/trade?asset=${coin.symbol}`}
-                        className="px-4 py-2 text-sm font-medium text-dark-950 bg-gradient-to-r from-primary-400 to-accent-500 rounded-lg hover:opacity-90 transition-opacity"
-                      >
-                        Trade
-                      </Link>
-                    </td>
+                    <td className="px-4 sm:px-6 py-4"><div className="h-4 w-24 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4"><div className="h-4 w-16 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4 hidden md:table-cell"><div className="h-10 w-24 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4 hidden sm:table-cell"><div className="h-4 w-20 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4 hidden lg:table-cell"><div className="h-4 w-20 bg-dark-700 rounded" /></td>
+                    <td className="px-4 sm:px-6 py-4 text-right"><div className="h-8 w-16 bg-dark-700 rounded ml-auto" /></td>
                   </tr>
-                )
-              })}
+                ))
+              ) : (
+                sortedData.map((coin, index) => {
+                  const chartData = generateMiniChartData(coin.priceChange24h >= 0)
+                  return (
+                    <tr key={coin.symbol} className="hover:bg-white/5 transition-colors">
+                      <td className="px-4 sm:px-6 py-4 text-dark-400">{index + 1}</td>
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
+                            style={{ backgroundColor: coin.color + '20', color: coin.color }}
+                          >
+                            {coin.icon}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{coin.name}</p>
+                            <p className="text-xs text-dark-400">{coin.symbol}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4">
+                        <span className="text-white font-medium">
+                          ${formatPrice(coin.price)}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 ${coin.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {coin.priceChange24h >= 0 ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          )}
+                          {Math.abs(coin.priceChange24h).toFixed(2)}%
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
+                        <div className="w-24 h-10">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke={coin.priceChange24h >= 0 ? '#22c55e' : '#ef4444'}
+                                strokeWidth={1.5}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
+                        <span className="text-dark-300">{formatLargeNumber(coin.volume)}</span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
+                        <span className="text-dark-300">{formatLargeNumber(coin.marketCap)}</span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 text-right">
+                        <Link
+                          href={`/dashboard/trade?asset=${coin.symbol}`}
+                          className="px-4 py-2 text-sm font-medium text-dark-950 bg-gradient-to-r from-primary-400 to-accent-500 rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                          Trade
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
+
+        {sortedData.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-dark-400">No cryptocurrencies found</p>
+          </div>
+        )}
       </div>
     </div>
   )
 }
-

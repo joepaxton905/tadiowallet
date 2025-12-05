@@ -1,24 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { marketData } from '@/lib/mockData'
-
-const cryptoIcons = {
-  BTC: { icon: '₿', color: '#F7931A' },
-  ETH: { icon: 'Ξ', color: '#627EEA' },
-  SOL: { icon: '◎', color: '#9945FF' },
-  BNB: { icon: '◆', color: '#F3BA2F' },
-  XRP: { icon: '✕', color: '#23292F' },
-  ADA: { icon: '₳', color: '#0033AD' },
-  AVAX: { icon: '◆', color: '#E84142' },
-  DOGE: { icon: 'Ð', color: '#C2A633' },
-}
+import { useMarketData } from '@/hooks/useCryptoPrices'
+import { formatPrice, formatLargeNumber } from '@/lib/crypto'
 
 export default function MarketOverview() {
+  const { data: marketData, loading } = useMarketData(
+    ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'],
+    30000
+  )
+
   return (
     <div className="glass-card overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-        <h3 className="text-lg font-semibold text-white">Market Overview</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-white">Market Overview</h3>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs text-green-400">Live</span>
+          </div>
+        </div>
         <Link
           href="/dashboard/markets"
           className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
@@ -40,17 +41,36 @@ export default function MarketOverview() {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {marketData.slice(0, 5).map((coin) => {
-              const iconData = cryptoIcons[coin.symbol] || { icon: '●', color: '#888' }
-              return (
+            {loading ? (
+              // Loading skeleton
+              [...Array(5)].map((_, index) => (
+                <tr key={index} className="animate-pulse">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-dark-700" />
+                      <div>
+                        <div className="h-4 w-16 bg-dark-700 rounded mb-1" />
+                        <div className="h-3 w-12 bg-dark-700 rounded" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4"><div className="h-4 w-20 bg-dark-700 rounded" /></td>
+                  <td className="px-6 py-4"><div className="h-4 w-14 bg-dark-700 rounded" /></td>
+                  <td className="px-6 py-4 hidden sm:table-cell"><div className="h-4 w-16 bg-dark-700 rounded" /></td>
+                  <td className="px-6 py-4 hidden md:table-cell"><div className="h-4 w-16 bg-dark-700 rounded" /></td>
+                  <td className="px-6 py-4 text-right"><div className="h-8 w-16 bg-dark-700 rounded ml-auto" /></td>
+                </tr>
+              ))
+            ) : (
+              marketData.map((coin) => (
                 <tr key={coin.symbol} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-                        style={{ backgroundColor: iconData.color + '20', color: iconData.color }}
+                        style={{ backgroundColor: coin.color + '20', color: coin.color }}
                       >
-                        {iconData.icon}
+                        {coin.icon}
                       </div>
                       <div>
                         <p className="font-medium text-white">{coin.symbol}</p>
@@ -60,12 +80,12 @@ export default function MarketOverview() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-white font-medium">
-                      ${coin.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${formatPrice(coin.price)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 ${coin.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {coin.change >= 0 ? (
+                    <span className={`inline-flex items-center gap-1 ${coin.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {coin.priceChange24h >= 0 ? (
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                         </svg>
@@ -74,14 +94,14 @@ export default function MarketOverview() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       )}
-                      {Math.abs(coin.change)}%
+                      {Math.abs(coin.priceChange24h).toFixed(2)}%
                     </span>
                   </td>
                   <td className="px-6 py-4 hidden sm:table-cell">
-                    <span className="text-dark-300">${coin.volume}</span>
+                    <span className="text-dark-300">{formatLargeNumber(coin.volume)}</span>
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
-                    <span className="text-dark-300">${coin.marketCap}</span>
+                    <span className="text-dark-300">{formatLargeNumber(coin.marketCap)}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <Link
@@ -92,12 +112,11 @@ export default function MarketOverview() {
                     </Link>
                   </td>
                 </tr>
-              )
-            })}
+              ))
+            )}
           </tbody>
         </table>
       </div>
     </div>
   )
 }
-
