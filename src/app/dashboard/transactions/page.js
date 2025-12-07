@@ -177,11 +177,11 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-dark-300 text-sm">
-                        {format(new Date(tx.date), 'MMM d, yyyy')}
+                        {format(new Date(tx.createdAt || tx.date), 'MMM d, yyyy')}
                       </span>
                       <br />
                       <span className="text-dark-500 text-xs">
-                        {format(new Date(tx.date), 'h:mm a')}
+                        {format(new Date(tx.createdAt || tx.date), 'h:mm a')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -252,7 +252,7 @@ export default function TransactionsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-dark-400">Date</span>
-                  <span className="text-white">{format(new Date(selectedTx.date), 'MMM d, yyyy h:mm a')}</span>
+                  <span className="text-white">{format(new Date(selectedTx.createdAt || selectedTx.date), 'MMM d, yyyy h:mm a')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-dark-400">Fee</span>

@@ -7,3 +7,6 @@ make sure you understand what this project is all about before attempting any ta
 TASK: remove hashing the passwords. passwords should be saved just plain without hashing. 
 
 now fetch the user's actual live data from the database and display it at the frontend. create database fields for fields that are supposed to be at the database but not there yet because this project was started by doing frontend first, hence the dummy data. we are now doing the backend, everything must be impeccable.
+
+
+cd "Z:\tadiowallet" && node scripts/seed-database.js

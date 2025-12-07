@@ -5,7 +5,7 @@ import { usePortfolio } from '@/hooks/useUserData'
 import { useMarketData } from '@/hooks/useCryptoPrices'
 
 export default function SendPage() {
-  const { portfolio } = usePortfolio()
+  const { portfolio, loading: portfolioLoading } = usePortfolio()
   
   // Get portfolio symbols
   const portfolioSymbols = useMemo(() => {
@@ -13,7 +13,9 @@ export default function SendPage() {
     return portfolio.map(h => h.symbol)
   }, [portfolio])
   
-  const { data: marketData } = useMarketData(portfolioSymbols, 30000)
+  const { data: marketData, loading: marketLoading } = useMarketData(portfolioSymbols, 30000)
+  
+  const loading = portfolioLoading || marketLoading
   
   // Combine portfolio with market data
   const assets = useMemo(() => {
@@ -38,6 +40,7 @@ export default function SendPage() {
       setSelectedAsset(assets[0])
     }
   }, [assets, selectedAsset])
+  
   const [amount, setAmount] = useState('')
   const [recipient, setRecipient] = useState('')
   const [showAssetSelector, setShowAssetSelector] = useState(false)
@@ -46,8 +49,8 @@ export default function SendPage() {
   const estimatedValue = amount && selectedAsset ? parseFloat(amount) * selectedAsset.price : 0
   const networkFee = selectedAsset ? 0.0001 * selectedAsset.price : 0
   
-  // Show loading state if no assets yet
-  if (!selectedAsset || assets.length === 0) {
+  // Show loading skeleton while data is loading
+  if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="glass-card p-6">
@@ -59,6 +62,44 @@ export default function SendPage() {
         </div>
       </div>
     )
+  }
+  
+  // Show empty state if user has no assets
+  if (assets.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="hidden lg:block text-center">
+          <h1 className="text-2xl font-heading font-bold text-white">Send Crypto</h1>
+          <p className="text-dark-400">Transfer cryptocurrency to any wallet address</p>
+        </div>
+        
+        <div className="glass-card p-8 sm:p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-500/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">No Assets to Send</h3>
+          <p className="text-dark-400 mb-6">
+            You don't have any cryptocurrency in your portfolio yet.
+          </p>
+          <a
+            href="/dashboard/trade"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Buy Crypto
+          </a>
+        </div>
+      </div>
+    )
+  }
+  
+  // Ensure selectedAsset is set
+  if (!selectedAsset && assets.length > 0) {
+    return null // Will be set by useEffect on next render
   }
 
   const handleContinue = () => {

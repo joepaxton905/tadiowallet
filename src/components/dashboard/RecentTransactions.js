@@ -119,7 +119,7 @@ export default function RecentTransactions({ limit = 5 }) {
                     {config.label} {tx.asset}
                   </p>
                   <p className="text-xs text-dark-400">
-                    {format(new Date(tx.date), 'MMM d, h:mm a')}
+                    {format(new Date(tx.createdAt || tx.date), 'MMM d, h:mm a')}
                   </p>
                 </div>
               </div>

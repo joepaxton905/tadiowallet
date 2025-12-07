@@ -5,13 +5,15 @@ import { usePortfolio, useWallets } from '@/hooks/useUserData'
 import { useMarketData } from '@/hooks/useCryptoPrices'
 
 export default function ReceivePage() {
-  const { portfolio } = usePortfolio()
-  const { wallets, createOrUpdateWallet } = useWallets()
+  const { portfolio, loading: portfolioLoading } = usePortfolio()
+  const { wallets, createOrUpdateWallet, loading: walletsLoading } = useWallets()
   
   // Get portfolio symbols (show all available coins, not just ones with holdings)
   const availableSymbols = ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
   
-  const { data: marketData } = useMarketData(availableSymbols, 30000)
+  const { data: marketData, loading: marketLoading } = useMarketData(availableSymbols, 30000)
+  
+  const loading = marketLoading // Main loading state for market data
   
   // Combine market data into assets
   const assets = useMemo(() => {
@@ -55,8 +57,8 @@ export default function ReceivePage() {
     }
   }
   
-  // Show loading state if no assets yet
-  if (!selectedAsset || assets.length === 0) {
+  // Show loading skeleton while data is loading
+  if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="glass-card p-6">
@@ -68,6 +70,11 @@ export default function ReceivePage() {
         </div>
       </div>
     )
+  }
+  
+  // Ensure selectedAsset is set (should always have assets for receive)
+  if (!selectedAsset && assets.length > 0) {
+    return null // Will be set by useEffect on next render
   }
 
   return (

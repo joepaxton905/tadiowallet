@@ -99,6 +99,19 @@ transactionSchema.virtual('date').get(function() {
   return this.createdAt
 })
 
+// Ensure virtuals are included when converting to JSON
+transactionSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret) {
+    delete ret.__v
+    return ret
+  }
+})
+
+transactionSchema.set('toObject', {
+  virtuals: true
+})
+
 // Static method to get user transactions with filters
 transactionSchema.statics.getUserTransactions = function(userId, filters = {}) {
   const query = { userId }
