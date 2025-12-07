@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useUserProfile } from '@/hooks/useUserData'
 import { config } from '@/lib/config'
 
 const tabs = [
@@ -11,7 +12,12 @@ const tabs = [
 ]
 
 export default function SettingsPage() {
+  const { profile, loading, updateProfile } = useUserProfile()
+  
   const [activeTab, setActiveTab] = useState('profile')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [priceAlerts, setPriceAlerts] = useState(true)
@@ -19,6 +25,51 @@ export default function SettingsPage() {
   const [marketingEmails, setMarketingEmails] = useState(false)
   const [currency, setCurrency] = useState('USD')
   const [language, setLanguage] = useState('en')
+  
+  // Update form when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.firstName || '')
+      setLastName(profile.lastName || '')
+      setEmail(profile.email || '')
+      setTwoFactorEnabled(profile.twoFactorEnabled || false)
+      setEmailNotifications(profile.preferences?.notifications?.email ?? true)
+      setPriceAlerts(profile.preferences?.notifications?.priceAlerts ?? true)
+      setTransactionAlerts(profile.preferences?.notifications?.transactionAlerts ?? true)
+      setMarketingEmails(profile.preferences?.notifications?.marketing ?? false)
+      setCurrency(profile.preferences?.currency || 'USD')
+      setLanguage(profile.preferences?.language || 'en')
+    }
+  }, [profile])
+  
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile({ firstName, lastName })
+      alert('Profile updated successfully!')
+    } catch (error) {
+      alert('Failed to update profile: ' + error.message)
+    }
+  }
+  
+  const handleSavePreferences = async () => {
+    try {
+      await updateProfile({
+        preferences: {
+          currency,
+          language,
+          notifications: {
+            email: emailNotifications,
+            priceAlerts,
+            transactionAlerts,
+            marketing: marketingEmails,
+          },
+        },
+      })
+      alert('Preferences updated successfully!')
+    } catch (error) {
+      alert('Failed to update preferences: ' + error.message)
+    }
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -59,7 +110,7 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-6">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-2xl font-bold text-white">
-                  JD
+                  {profile ? `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}` : 'JD'}
                 </div>
                 <div>
                   <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors">
@@ -75,33 +126,31 @@ export default function SettingsPage() {
                   <label className="block text-sm text-dark-400 mb-2">First Name</label>
                   <input
                     type="text"
-                    defaultValue="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     className="w-full px-4 py-3 bg-dark-800/50 border border-white/5 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
+                    disabled={loading}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-dark-400 mb-2">Last Name</label>
                   <input
                     type="text"
-                    defaultValue="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     className="w-full px-4 py-3 bg-dark-800/50 border border-white/5 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
+                    disabled={loading}
                   />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm text-dark-400 mb-2">Email Address</label>
                   <input
                     type="email"
-                    defaultValue="john@example.com"
-                    className="w-full px-4 py-3 bg-dark-800/50 border border-white/5 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
+                    value={email}
+                    disabled
+                    className="w-full px-4 py-3 bg-dark-800/50 border border-white/5 rounded-xl text-dark-500 focus:outline-none cursor-not-allowed"
                   />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-dark-400 mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    defaultValue="+1 (555) 123-4567"
-                    className="w-full px-4 py-3 bg-dark-800/50 border border-white/5 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
-                  />
+                  <p className="text-xs text-dark-500 mt-1">Email cannot be changed</p>
                 </div>
               </div>
 
@@ -123,8 +172,12 @@ export default function SettingsPage() {
                 </span>
               </div>
 
-              <button className="px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity">
-                Save Changes
+              <button 
+                onClick={handleSaveProfile}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}
@@ -300,8 +353,12 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <button className="px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity">
-                Save Preferences
+              <button 
+                onClick={handleSavePreferences}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save Preferences'}
               </button>
             </div>
           )}

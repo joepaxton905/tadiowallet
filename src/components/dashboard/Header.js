@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { notifications } from '@/lib/mockData'
+import { useNotifications } from '@/hooks/useUserData'
 
 export default function Header({ onMenuClick }) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
-  const unreadCount = notifications.filter(n => !n.read).length
+  
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(20)
 
   return (
     <header className="sticky top-0 z-30 h-20 bg-dark-950/80 backdrop-blur-xl border-b border-white/5">
@@ -90,18 +91,27 @@ export default function Header({ onMenuClick }) {
                 <div className="absolute right-0 top-full mt-2 w-80 bg-dark-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                     <h3 className="font-semibold text-white">Notifications</h3>
-                    <button className="text-xs text-primary-400 hover:text-primary-300">
+                    <button 
+                      onClick={() => markAllAsRead().catch(console.error)}
+                      className="text-xs text-primary-400 hover:text-primary-300"
+                    >
                       Mark all read
                     </button>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${
-                          !notification.read ? 'bg-primary-500/5' : ''
-                        }`}
-                      >
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-dark-400">
+                        No notifications
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification._id || notification.id}
+                          onClick={() => !notification.read && markAsRead(notification._id).catch(console.error)}
+                          className={`px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${
+                            !notification.read ? 'bg-primary-500/5' : ''
+                          }`}
+                        >
                         <div className="flex items-start gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             notification.type === 'price_alert' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -140,7 +150,8 @@ export default function Header({ onMenuClick }) {
                           )}
                         </div>
                       </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                   <div className="px-4 py-3 border-t border-white/5">
                     <button className="w-full text-center text-sm text-primary-400 hover:text-primary-300">

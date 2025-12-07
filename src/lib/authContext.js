@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 const AuthContext = createContext(null)
@@ -58,9 +58,9 @@ export function AuthProvider({ children }) {
     router.push('/login')
   }
 
-  const isAuthenticated = () => {
+  const isAuthenticated = useCallback(() => {
     return !!token && !!user
-  }
+  }, [token, user])
 
   return (
     <AuthContext.Provider value={{

@@ -1,20 +1,73 @@
 'use client'
 
-import { useState } from 'react'
-import { assets } from '@/lib/mockData'
+import { useState, useMemo, useEffect } from 'react'
+import { usePortfolio, useWallets } from '@/hooks/useUserData'
+import { useMarketData } from '@/hooks/useCryptoPrices'
 
 export default function ReceivePage() {
-  const [selectedAsset, setSelectedAsset] = useState(assets[0])
+  const { portfolio } = usePortfolio()
+  const { wallets, createOrUpdateWallet } = useWallets()
+  
+  // Get portfolio symbols (show all available coins, not just ones with holdings)
+  const availableSymbols = ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
+  
+  const { data: marketData } = useMarketData(availableSymbols, 30000)
+  
+  // Combine market data into assets
+  const assets = useMemo(() => {
+    return marketData.map(coin => ({
+      ...coin,
+      id: coin.symbol.toLowerCase(),
+    }))
+  }, [marketData])
+  
+  const [selectedAsset, setSelectedAsset] = useState(null)
   const [showAssetSelector, setShowAssetSelector] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  // Mock wallet address
-  const walletAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f8b3F8b'
+  
+  // Set initial selected asset once assets are loaded
+  useEffect(() => {
+    if (!selectedAsset && assets.length > 0) {
+      setSelectedAsset(assets[0])
+    }
+  }, [assets, selectedAsset])
+  
+  // Get wallet address for selected asset
+  const walletAddress = useMemo(() => {
+    if (!selectedAsset) return ''
+    const wallet = wallets.find(w => w.symbol === selectedAsset.symbol)
+    return wallet?.address || ''
+  }, [selectedAsset, wallets])
+  
+  // Generate wallet if none exists for this asset
+  useEffect(() => {
+    if (selectedAsset && !walletAddress) {
+      // Auto-generate wallet address for this asset
+      createOrUpdateWallet(selectedAsset.symbol).catch(console.error)
+    }
+  }, [selectedAsset, walletAddress, createOrUpdateWallet])
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(walletAddress)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (walletAddress) {
+      navigator.clipboard.writeText(walletAddress)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+  
+  // Show loading state if no assets yet
+  if (!selectedAsset || assets.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="glass-card p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-dark-700 rounded w-1/2" />
+            <div className="h-48 bg-dark-700 rounded" />
+            <div className="h-16 bg-dark-700 rounded" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

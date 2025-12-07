@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { config } from '@/lib/config'
-import { notifications } from '@/lib/mockData'
+import { useNotifications } from '@/hooks/useUserData'
 
 const pageNames = {
   '/dashboard': 'Dashboard',
@@ -20,7 +20,7 @@ const pageNames = {
 export default function MobileHeader() {
   const pathname = usePathname()
   const [showNotifications, setShowNotifications] = useState(false)
-  const unreadCount = notifications.filter(n => !n.read).length
+  const { notifications, unreadCount } = useNotifications(10)
   
   const pageName = pageNames[pathname] || 'Dashboard'
   const isHome = pathname === '/dashboard'

@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
 import { config } from '@/lib/config'
 
 export default function SignupPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -176,14 +178,16 @@ export default function SignupPage() {
         return
       }
 
-      // Success - store token and redirect
-      if (data.token) {
-        localStorage.setItem('authToken', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+      // Success - update AuthContext and store token
+      if (data.token && data.user) {
+        // Always remember on signup (they just created account)
+        login(data.user, data.token, true)
+        
+        // Redirect to dashboard
+        router.push('/dashboard')
+      } else {
+        setError('Signup failed. Please try again.')
       }
-
-      // Redirect to dashboard
-      router.push('/dashboard')
       
     } catch (err) {
       console.error('Signup error:', err)

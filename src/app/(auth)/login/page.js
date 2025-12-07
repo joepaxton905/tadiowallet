@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
 import { config } from '@/lib/config'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -66,19 +68,15 @@ export default function LoginPage() {
         return
       }
 
-      // Success - store token and user data
-      if (data.token) {
-        if (rememberMe) {
-          localStorage.setItem('authToken', data.token)
-          localStorage.setItem('user', JSON.stringify(data.user))
-        } else {
-          sessionStorage.setItem('authToken', data.token)
-          sessionStorage.setItem('user', JSON.stringify(data.user))
-        }
+      // Success - update AuthContext and store token
+      if (data.token && data.user) {
+        login(data.user, data.token, rememberMe)
+        
+        // Redirect to dashboard
+        router.push('/dashboard')
+      } else {
+        setError('Login failed. Please try again.')
       }
-
-      // Redirect to dashboard
-      router.push('/dashboard')
 
     } catch (err) {
       console.error('Login error:', err)

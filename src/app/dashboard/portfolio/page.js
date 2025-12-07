@@ -3,19 +3,8 @@
 import { useState, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useMarketData } from '@/hooks/useCryptoPrices'
+import { usePortfolio } from '@/hooks/useUserData'
 import { formatPrice } from '@/lib/crypto'
-
-// Mock holdings - in production this would come from user data
-const mockHoldings = {
-  BTC: 1.45,
-  ETH: 12.5,
-  SOL: 150,
-  ADA: 10000,
-  MATIC: 5000,
-  AVAX: 100,
-  LINK: 200,
-  DOT: 300,
-}
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -35,19 +24,38 @@ export default function PortfolioPage() {
   const [sortBy, setSortBy] = useState('value')
   const [sortOrder, setSortOrder] = useState('desc')
 
-  const { data: marketData, loading } = useMarketData(
-    ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT'],
+  const { portfolio, loading: portfolioLoading } = usePortfolio()
+  
+  // Get list of symbols from user's portfolio
+  const portfolioSymbols = useMemo(() => {
+    if (!portfolio.length) return ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
+    return [...new Set(portfolio.map(h => h.symbol))]
+  }, [portfolio])
+  
+  const { data: marketData, loading: marketLoading } = useMarketData(
+    portfolioSymbols,
     30000
   )
+  
+  const loading = portfolioLoading || marketLoading
+  
+  // Convert portfolio array to holdings object
+  const holdings = useMemo(() => {
+    const holdingsMap = {}
+    portfolio.forEach(item => {
+      holdingsMap[item.symbol] = item.holdings
+    })
+    return holdingsMap
+  }, [portfolio])
 
   // Calculate portfolio data from live prices
   const { assets, totalValue, pieData, bestPerformer, worstPerformer } = useMemo(() => {
     const assetsWithValue = marketData
-      .filter(coin => mockHoldings[coin.symbol])
+      .filter(coin => holdings[coin.symbol] > 0)
       .map(coin => ({
         ...coin,
-        holdings: mockHoldings[coin.symbol] || 0,
-        value: (mockHoldings[coin.symbol] || 0) * coin.price,
+        holdings: holdings[coin.symbol] || 0,
+        value: (holdings[coin.symbol] || 0) * coin.price,
       }))
 
     const total = assetsWithValue.reduce((sum, a) => sum + a.value, 0)

@@ -1,17 +1,65 @@
 'use client'
 
-import { useState } from 'react'
-import { assets } from '@/lib/mockData'
+import { useState, useMemo, useEffect } from 'react'
+import { usePortfolio } from '@/hooks/useUserData'
+import { useMarketData } from '@/hooks/useCryptoPrices'
 
 export default function SendPage() {
-  const [selectedAsset, setSelectedAsset] = useState(assets[0])
+  const { portfolio } = usePortfolio()
+  
+  // Get portfolio symbols
+  const portfolioSymbols = useMemo(() => {
+    if (!portfolio.length) return []
+    return portfolio.map(h => h.symbol)
+  }, [portfolio])
+  
+  const { data: marketData } = useMarketData(portfolioSymbols, 30000)
+  
+  // Combine portfolio with market data
+  const assets = useMemo(() => {
+    return marketData
+      .map(coin => {
+        const holding = portfolio.find(h => h.symbol === coin.symbol)
+        return {
+          ...coin,
+          id: coin.symbol.toLowerCase(),
+          holdings: holding?.holdings || 0,
+          value: (holding?.holdings || 0) * coin.price,
+        }
+      })
+      .filter(asset => asset.holdings > 0)
+  }, [marketData, portfolio])
+  
+  const [selectedAsset, setSelectedAsset] = useState(null)
+  
+  // Set initial selected asset once assets are loaded
+  useEffect(() => {
+    if (!selectedAsset && assets.length > 0) {
+      setSelectedAsset(assets[0])
+    }
+  }, [assets, selectedAsset])
   const [amount, setAmount] = useState('')
   const [recipient, setRecipient] = useState('')
   const [showAssetSelector, setShowAssetSelector] = useState(false)
   const [step, setStep] = useState(1)
 
-  const estimatedValue = amount ? parseFloat(amount) * selectedAsset.price : 0
-  const networkFee = 0.0001 * selectedAsset.price
+  const estimatedValue = amount && selectedAsset ? parseFloat(amount) * selectedAsset.price : 0
+  const networkFee = selectedAsset ? 0.0001 * selectedAsset.price : 0
+  
+  // Show loading state if no assets yet
+  if (!selectedAsset || assets.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="glass-card p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-dark-700 rounded w-1/2" />
+            <div className="h-20 bg-dark-700 rounded" />
+            <div className="h-20 bg-dark-700 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleContinue = () => {
     if (step === 1 && recipient && amount) {

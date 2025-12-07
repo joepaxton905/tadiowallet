@@ -2,41 +2,51 @@
 
 import { useMemo } from 'react'
 import { useMarketData } from '@/hooks/useCryptoPrices'
+import { usePortfolio } from '@/hooks/useUserData'
 import { formatPrice } from '@/lib/crypto'
 import PortfolioChart from '@/components/dashboard/PortfolioChart'
 import QuickActions from '@/components/dashboard/QuickActions'
 import AssetList from '@/components/dashboard/AssetList'
 import RecentTransactions from '@/components/dashboard/RecentTransactions'
 import MarketOverview from '@/components/dashboard/MarketOverview'
-
-// Mock holdings - in production this would come from user data
-const mockHoldings = {
-  BTC: 1.45,
-  ETH: 12.5,
-  SOL: 150,
-  ADA: 10000,
-  MATIC: 5000,
-  AVAX: 100,
-  LINK: 200,
-  DOT: 300,
-}
+import { useAuth } from '@/lib/authContext'
 
 export default function DashboardPage() {
-  const { data: marketData, loading } = useMarketData(
-    ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT'],
+  const { user } = useAuth()
+  const { portfolio, loading: portfolioLoading } = usePortfolio()
+  
+  // Get list of symbols from user's portfolio
+  const portfolioSymbols = useMemo(() => {
+    if (!portfolio.length) return ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
+    return [...new Set(portfolio.map(h => h.symbol))]
+  }, [portfolio])
+  
+  const { data: marketData, loading: marketLoading } = useMarketData(
+    portfolioSymbols,
     30000
   )
+  
+  const loading = portfolioLoading || marketLoading
+  
+  // Convert portfolio array to holdings object
+  const holdings = useMemo(() => {
+    const holdingsMap = {}
+    portfolio.forEach(item => {
+      holdingsMap[item.symbol] = item.holdings
+    })
+    return holdingsMap
+  }, [portfolio])
 
   // Calculate portfolio values from live prices
   const portfolioData = useMemo(() => {
-    if (!marketData.length) {
+    if (!marketData.length || !Object.keys(holdings).length) {
       return {
         totalBalance: 0,
         dayChange: 0,
         dayChangePercent: 0,
         weekChange: 0,
         weekChangePercent: 0,
-        assetCount: Object.keys(mockHoldings).length,
+        assetCount: Object.keys(holdings).length,
       }
     }
 
@@ -44,12 +54,14 @@ export default function DashboardPage() {
     let totalPreviousValue = 0
 
     marketData.forEach(coin => {
-      const holdings = mockHoldings[coin.symbol] || 0
-      const currentValue = holdings * coin.price
-      const previousValue = currentValue / (1 + coin.priceChange24h / 100)
-      
-      totalValue += currentValue
-      totalPreviousValue += previousValue
+      const userHoldings = holdings[coin.symbol] || 0
+      if (userHoldings > 0) {
+        const currentValue = userHoldings * coin.price
+        const previousValue = currentValue / (1 + coin.priceChange24h / 100)
+        
+        totalValue += currentValue
+        totalPreviousValue += previousValue
+      }
     })
 
     const dayChange = totalValue - totalPreviousValue
@@ -65,9 +77,9 @@ export default function DashboardPage() {
       dayChangePercent,
       weekChange,
       weekChangePercent,
-      assetCount: marketData.filter(c => mockHoldings[c.symbol]).length,
+      assetCount: marketData.filter(c => holdings[c.symbol] > 0).length,
     }
-  }, [marketData])
+  }, [marketData, holdings])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -88,7 +100,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-dark-400 text-sm">Good morning,</p>
-            <p className="text-lg font-semibold text-white">John Doe</p>
+            <p className="text-lg font-semibold text-white">
+              {user ? `${user.firstName} ${user.lastName}` : 'Welcome'}
+            </p>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />

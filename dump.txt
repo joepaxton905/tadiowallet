@@ -1,0 +1,9 @@
+study and observe this code base.
+there is already an existing .env file and mongodb setup. grant yourself access to read them if you need them.
+manually install packages(write to package.json file) when needed.
+do not recreate what has already been created. build on top of what already exists
+save to database what is supposed to be saved in there and not to localstorage.
+make sure you understand what this project is all about before attempting any tasks, do not ruin my hard work.
+TASK: remove hashing the passwords. passwords should be saved just plain without hashing. 
+
+now fetch the user's actual live data from the database and display it at the frontend. create database fields for fields that are supposed to be at the database but not there yet because this project was started by doing frontend first, hence the dummy data. we are now doing the backend, everything must be impeccable.

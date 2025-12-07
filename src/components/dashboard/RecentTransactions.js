@@ -1,7 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
-import { transactions } from '@/lib/mockData'
+import { useTransactions } from '@/hooks/useUserData'
 import { format } from 'date-fns'
 
 const typeConfig = {
@@ -62,6 +63,9 @@ const typeConfig = {
 }
 
 export default function RecentTransactions({ limit = 5 }) {
+  // Memoize filters object to prevent infinite loop
+  const transactionFilters = useMemo(() => ({ limit: limit * 2 }), [limit])
+  const { transactions, loading } = useTransactions(transactionFilters)
   const displayTx = transactions.slice(0, limit)
 
   return (
@@ -77,7 +81,28 @@ export default function RecentTransactions({ limit = 5 }) {
       </div>
 
       <div className="divide-y divide-white/5">
-        {displayTx.map((tx) => {
+        {loading ? (
+          [...Array(limit)].map((_, index) => (
+            <div key={index} className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-dark-700" />
+                <div>
+                  <div className="h-4 w-24 bg-dark-700 rounded mb-1" />
+                  <div className="h-3 w-20 bg-dark-700 rounded" />
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="h-4 w-20 bg-dark-700 rounded mb-1" />
+                <div className="h-3 w-16 bg-dark-700 rounded ml-auto" />
+              </div>
+            </div>
+          ))
+        ) : displayTx.length === 0 ? (
+          <div className="px-4 sm:px-6 py-8 text-center text-dark-400">
+            No recent transactions
+          </div>
+        ) : (
+          displayTx.map((tx) => {
           const config = typeConfig[tx.type]
           return (
             <div
@@ -114,7 +139,8 @@ export default function RecentTransactions({ limit = 5 }) {
               </div>
             </div>
           )
-        })}
+          })
+        )}
       </div>
     </div>
   )

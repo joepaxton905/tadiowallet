@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { transactions } from '@/lib/mockData'
+import { useState, useMemo } from 'react'
+import { useTransactions } from '@/hooks/useUserData'
 import { format } from 'date-fns'
 
 const typeConfig = {
@@ -35,12 +35,18 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTx, setSelectedTx] = useState(null)
 
-  const filteredTransactions = transactions.filter((tx) => {
-    const matchesFilter = filter === 'all' || tx.type === filter
-    const matchesSearch = tx.asset.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          tx.assetName.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
+  // Memoize filters object to prevent infinite loop
+  const transactionFilters = useMemo(() => ({ limit: 100 }), [])
+  const { transactions, loading } = useTransactions(transactionFilters)
+  
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      const matchesFilter = filter === 'all' || tx.type === filter
+      const matchesSearch = tx.asset.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            tx.assetName.toLowerCase().includes(searchTerm.toLowerCase())
+      return matchesFilter && matchesSearch
+    })
+  }, [transactions, filter, searchTerm])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -110,10 +116,23 @@ export default function TransactionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredTransactions.map((tx) => {
-                const config = typeConfig[tx.type]
-                const status = statusColors[tx.status]
-                return (
+              {loading ? (
+                [...Array(5)].map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-10 w-24 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-10 w-32 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-6 w-20 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-6 w-20 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-6 w-20 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-6 w-24 bg-dark-700 rounded" /></td>
+                    <td className="px-6 py-4 text-right"><div className="h-8 w-16 bg-dark-700 rounded ml-auto" /></td>
+                  </tr>
+                ))
+              ) : (
+                filteredTransactions.map((tx) => {
+                  const config = typeConfig[tx.type]
+                  const status = statusColors[tx.status]
+                  return (
                   <tr key={tx.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -174,13 +193,14 @@ export default function TransactionsPage() {
                       </button>
                     </td>
                   </tr>
-                )
-              })}
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredTransactions.length === 0 && (
+        {!loading && filteredTransactions.length === 0 && (
           <div className="text-center py-12">
             <svg className="w-12 h-12 mx-auto text-dark-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
