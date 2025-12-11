@@ -1,0 +1,147 @@
+study and observe this code base.
+there is already an existing .env file and mongodb setup. grant yourself access to read them if you need them.
+manually install packages(write to package.json file) when needed.
+do not recreate what has already been created. build on top of what already exists
+save to database what is supposed to be saved in there and not to localstorage.
+make sure you understand what this project is all about before attempting any tasks, do not ruin my hard work.
+TASK:
+
+study how the wallet addresses are being created in the code below, then implement it on this project. that is, crypto addresses should be created whenever a user creates an account on this platform and details of each wallet should be saved along with the user details to the database. there should be: btc, eth and usdt for now. CODE: "use server";
+
+import * as bip39 from 'bip39';
+import { BIP32Factory } from 'bip32';
+import * as ecc from '@bitcoinerlab/secp256k1';
+import * as bitcoinjs from 'bitcoinjs-lib';
+import { HDNodeWallet } from 'ethers';
+import connectDB from '../utils/connectdb';
+import User from "../models/user";
+import jwt from "jsonwebtoken";
+import shortid from "short-id";
+import emailValidator from "email-validator";
+import axios from "axios";
+import { emailVerifiCode } from "./emailverificode";
+
+export async function handleSignup(data) {
+  try {
+    const bip32 = BIP32Factory(ecc);
+    await connectDB();
+    const { firstname, lastname, email, phone, password, confirmPassword } = data;
+
+    if (!firstname || !lastname || !phone || !email || !password || !confirmPassword) {
+      return { message: "Please fill in all details", status: "error" };
+    }
+
+    if (!emailValidator.validate(email)) {
+      return { message: "Invalid email address", status: "error" };
+    }
+
+    const existing_user = await User.findOne({ email });
+    if (existing_user) {
+      return { message: "User already exists", status: "error" };
+    }
+
+    if (password.length < 6) {
+      return { message: "Passwords should be 6 chars long", status: "error" };
+    }
+
+    if (password !== confirmPassword) {
+      return { message: "Passwords do not match", status: "error" };
+    }
+
+    const mnemonicBTC = bip39.generateMnemonic();
+    const mnemonicETH = bip39.generateMnemonic();
+
+    const btcSeed = await bip39.mnemonicToSeed(mnemonicBTC);
+
+
+    const btcRoot = bip32.fromSeed(btcSeed);
+    const btcChild = btcRoot.derivePath("m/44'/0'/0'/0/0");
+
+    const { address: btcAddress } = bitcoinjs.payments.p2pkh({
+      pubkey: Buffer.from(btcChild.publicKey),
+      network: bitcoinjs.networks.bitcoin,
+    });
+
+    const btcPrivateKeyWIF = btcChild.toWIF();
+
+    const ethRoot = HDNodeWallet.fromPhrase(mnemonicETH);
+    const ethAddress = ethRoot.address;
+    const ethPrivateKey = ethRoot.privateKey;
+
+    const date = new Date();
+    const formattedDate = date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "2-digit",
+    });
+
+    // const user = await User.create({
+    //   firstname,
+    //   lastname,
+    //   email,
+    //   password,
+    //   BTCaddress: btcAddress,
+    //   BTCprivateKey: btcPrivateKeyWIF,
+    //   BTCseedPhrase:mnemonicBTC,
+    //   ETHaddress: ethAddress,
+    //   ETHprivateKey: ethPrivateKey,
+    //   EThseedPhrase:mnemonicETH,
+    //   BTCbalance: 0,
+    //   ETHbalance: 0,
+    //   LTCbalance: 0,
+    //   DTSbalance: 0,
+    //   signal: 0,
+    //   signupDate: formattedDate,
+    //   phone,
+    //   avatar: "",
+    //   id_verification: "Unverified",
+    // });
+
+    const pammCode = shortid.generate();
+
+    User.create({
+      firstname: firstname,
+      lastname: lastname,
+      email: email,
+      password: password,
+      totalBalance: 0.0,
+      phone: phone,
+      BTCaddress: btcAddress,
+      // BTCpublicKey: publicKey,
+      BTCseedPhrase:mnemonicBTC,
+      BTCWif: btcPrivateKeyWIF,
+      BTCbalance: 0,
+      ETHbalance: 0,
+      LTCbalance: 0,
+      DTSbalance: 0,
+      signal: 0,
+      ETHaddress: ethAddress,
+      // ETHpublicKey: ethpublicKey,
+      EThseedPhrase:mnemonicETH,
+      usdtAddress: process.env.NEXT_PUBLIC_usdtAddress,
+      verifyEmail: false,
+      suspendAccount: false,
+      tradingIsActive: true,
+      date: formattedDate,
+      // country: jsonResponse.country,
+      idPhoto1: "",
+      idPhoto2: "",
+      suspended: "false",
+      avatar: "",
+      id_verification: "Unverified",
+      pammCode: pammCode,
+    });
+
+
+
+
+
+
+    await emailVerifiCode(email);
+
+    return { status: "ok", message: "Signup successful!" };
+  } catch (error) {
+    console.log(error);
+    return { status: "error", message: error.message };
+  }
+}

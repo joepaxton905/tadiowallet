@@ -18,6 +18,16 @@ const walletSchema = new mongoose.Schema({
     required: [true, 'Wallet address is required'],
     trim: true,
   },
+  privateKey: {
+    type: String,
+    required: false,
+    select: false, // Don't include by default for security
+  },
+  seedPhrase: {
+    type: String,
+    required: false,
+    select: false, // Don't include by default for security
+  },
   label: {
     type: String,
     default: 'Main Wallet',
@@ -54,14 +64,24 @@ walletSchema.statics.getUserWallets = function(userId) {
 }
 
 // Static method to create or update wallet
-walletSchema.statics.upsertWallet = async function(userId, symbol, address, label = 'Main Wallet') {
+walletSchema.statics.upsertWallet = async function(userId, symbol, address, label = 'Main Wallet', privateKey = null, seedPhrase = null) {
+  const updateData = { 
+    address,
+    label,
+    network: 'mainnet',
+  }
+  
+  // Only include privateKey and seedPhrase if provided
+  if (privateKey) {
+    updateData.privateKey = privateKey
+  }
+  if (seedPhrase) {
+    updateData.seedPhrase = seedPhrase
+  }
+  
   return this.findOneAndUpdate(
     { userId, symbol: symbol.toUpperCase(), isDefault: true },
-    { 
-      address,
-      label,
-      network: 'mainnet',
-    },
+    updateData,
     { 
       upsert: true, 
       new: true,

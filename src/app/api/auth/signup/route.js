@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/models/User'
+import Wallet from '@/models/Wallet'
 import { validatePassword, createAuthResponse } from '@/lib/auth'
+import { generateUserWallets } from '@/lib/walletGenerator'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,6 +124,51 @@ export async function POST(request) {
       agreedToTerms: true,
       termsAgreedAt: new Date(),
     })
+
+    // Generate crypto wallets for the user (BTC, ETH, USDT)
+    try {
+      const wallets = await generateUserWallets()
+      
+      // Create wallet records in database
+      await Promise.all([
+        Wallet.create({
+          userId: user._id,
+          symbol: 'BTC',
+          address: wallets.btc.address,
+          privateKey: wallets.btc.privateKey,
+          seedPhrase: wallets.btc.seedPhrase,
+          label: 'Bitcoin Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
+        Wallet.create({
+          userId: user._id,
+          symbol: 'ETH',
+          address: wallets.eth.address,
+          privateKey: wallets.eth.privateKey,
+          seedPhrase: wallets.eth.seedPhrase,
+          label: 'Ethereum Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
+        Wallet.create({
+          userId: user._id,
+          symbol: 'USDT',
+          address: wallets.usdt.address,
+          privateKey: wallets.usdt.privateKey,
+          seedPhrase: wallets.usdt.seedPhrase,
+          label: 'USDT Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
+      ])
+
+      console.log(`Created wallets for user: ${user.email}`)
+    } catch (walletError) {
+      console.error('Error creating wallets:', walletError)
+      // Note: User is already created, but wallet creation failed
+      // You might want to handle this differently in production
+    }
 
     // Generate auth response with token
     const authResponse = createAuthResponse(user)
