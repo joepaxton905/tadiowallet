@@ -51,7 +51,9 @@ export default function MarketOverview() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-xs font-semibold text-dark-400 border-b border-white/5 bg-dark-800/30">
+              <tr className="text-left text-xs font-semibold text-dark-400 border-b border-white/5" style={{
+                background: 'linear-gradient(to bottom, rgba(5, 10, 20, 0.7) 0%, rgba(10, 15, 28, 0.5) 100%)'
+              }}>
                 <th className="px-6 py-4">#</th>
                 <th className="px-6 py-4">Asset</th>
                 <th className="px-6 py-4">Price</th>
@@ -195,7 +197,10 @@ export default function MarketOverview() {
 
         {/* Footer Stats */}
         {!loading && marketData.length > 0 && (
-          <div className="px-6 py-4 bg-gradient-to-r from-dark-800/50 to-dark-900/50 border-t border-white/5">
+          <div className="px-6 py-4 border-t border-white/5" style={{
+            background: 'linear-gradient(to right, rgba(5, 10, 20, 0.8) 0%, rgba(10, 15, 28, 0.9) 100%)',
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'
+          }}>
             <div className="grid grid-cols-3 gap-6">
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">

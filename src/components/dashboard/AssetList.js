@@ -229,7 +229,10 @@ export default function AssetList({ limit, showViewAll = true }) {
 
         {/* Footer Summary */}
         {!loading && displayAssets.length > 0 && (
-          <div className="px-5 py-3 bg-gradient-to-r from-dark-800/50 to-dark-900/50 border-t border-white/5">
+          <div className="px-5 py-3 border-t border-white/5" style={{
+            background: 'linear-gradient(to right, rgba(5, 10, 20, 0.8) 0%, rgba(10, 15, 28, 0.9) 100%)',
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)'
+          }}>
             <div className="flex items-center justify-between text-sm">
               <span className="text-dark-400">Total Value</span>
               <span className="font-bold text-white text-base">${formatPrice(totalValue)}</span>

@@ -208,7 +208,11 @@ export default function DashboardPage() {
               {/* Portfolio Stats Grid */}
               <div className="grid grid-cols-2 gap-4">
                 {/* All-Time Gain/Loss */}
-                <div className="p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors">
+                <div className="p-4 rounded-xl backdrop-blur-sm transition-colors" style={{
+                  background: 'linear-gradient(135deg, rgba(10, 15, 28, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03)'
+                }}>
                   <div className="flex items-center gap-2 mb-2">
                     <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -230,7 +234,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 7d Change */}
-                <div className="p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors">
+                <div className="p-4 rounded-xl backdrop-blur-sm transition-colors" style={{
+                  background: 'linear-gradient(135deg, rgba(10, 15, 28, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03)'
+                }}>
                   <div className="flex items-center gap-2 mb-2">
                     <svg className="w-4 h-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -250,7 +258,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Best Performer */}
-                <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20 backdrop-blur-sm hover:border-green-500/30 transition-colors">
+                <div className="p-4 rounded-xl backdrop-blur-sm transition-all" style={{
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.05) 100%), linear-gradient(135deg, rgba(10, 15, 28, 0.7) 0%, rgba(15, 23, 42, 0.5) 100%)',
+                  border: '1px solid rgba(16, 185, 129, 0.15)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(16, 185, 129, 0.1)'
+                }}>
                   <div className="flex items-center gap-2 mb-2">
                     <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -268,7 +280,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Worst Performer */}
-                <div className="p-4 bg-gradient-to-br from-red-500/10 to-rose-500/10 rounded-xl border border-red-500/20 backdrop-blur-sm hover:border-red-500/30 transition-colors">
+                <div className="p-4 rounded-xl backdrop-blur-sm transition-all" style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.05) 100%), linear-gradient(135deg, rgba(10, 15, 28, 0.7) 0%, rgba(15, 23, 42, 0.5) 100%)',
+                  border: '1px solid rgba(239, 68, 68, 0.15)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(239, 68, 68, 0.1)'
+                }}>
                   <div className="flex items-center gap-2 mb-2">
                     <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
