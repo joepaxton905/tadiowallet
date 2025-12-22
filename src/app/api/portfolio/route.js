@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Portfolio from '@/models/Portfolio'
 import { verifyToken } from '@/lib/auth'
+import { queueStatsUpdate } from '@/lib/updateUserStats'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,9 @@ export async function POST(request) {
       averageBuyPrice
     )
 
+    // Update user stats (non-blocking)
+    queueStatsUpdate(decoded.userId)
+
     return NextResponse.json({
       success: true,
       holding,
@@ -145,6 +149,9 @@ export async function PATCH(request) {
         { status: 400 }
       )
     }
+
+    // Update user stats (non-blocking)
+    queueStatsUpdate(decoded.userId)
 
     return NextResponse.json({
       success: true,

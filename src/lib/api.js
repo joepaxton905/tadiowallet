@@ -83,6 +83,15 @@ export const transactionsAPI = {
       method: 'POST',
       body: JSON.stringify(transactionData),
     }),
+  
+  transfer: (recipientAddress, asset, amount, notes = '') =>
+    apiRequest('/transactions/transfer', {
+      method: 'POST',
+      body: JSON.stringify({ recipientAddress, asset, amount, notes }),
+    }),
+  
+  validateRecipient: (address, asset) =>
+    apiRequest(`/transactions/transfer?address=${encodeURIComponent(address)}&asset=${asset}`),
 }
 
 // Wallets API
@@ -132,5 +141,7 @@ export const userAPI = {
       method: 'PATCH',
       body: JSON.stringify(profileData),
     }),
+  
+  getStats: () => apiRequest('/user/stats'),
 }
 

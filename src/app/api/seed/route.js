@@ -23,12 +23,12 @@ export async function GET() {
     await connectDB()
 
     // Check if test user already exists
-    let user = await User.findOne({ email: 'test@example.com' })
+    let user = await User.findOne({ email: 'test2@example.com' })
     
     if (user) {
       return NextResponse.json({
         success: false,
-        message: 'Test account already exists! Login with: test@example.com / Test1234',
+        message: 'Test account already exists! Login with: test2@example.com / Test1234',
         user: {
           email: user.email,
           firstName: user.firstName,
@@ -41,7 +41,7 @@ export async function GET() {
     user = await User.create({
       firstName: 'Test',
       lastName: 'User',
-      email: 'test@example.com',
+      email: 'test2@example.com',
       password: 'Test1234', // Plain text as per your requirements
       agreedToTerms: true,
       termsAgreedAt: new Date(),
@@ -214,7 +214,7 @@ export async function GET() {
       success: true,
       message: 'Test account created and populated in DATABASE!',
       credentials: {
-        email: 'test@example.com',
+        email: 'test2@example.com',
         password: 'Test1234',
       },
       stats: {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Transaction from '@/models/Transaction'
 import { verifyToken } from '@/lib/auth'
+import { queueStatsUpdate } from '@/lib/updateUserStats'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,6 +132,9 @@ export async function POST(request) {
       txHash,
       notes,
     })
+
+    // Update user stats (non-blocking)
+    queueStatsUpdate(decoded.userId)
 
     return NextResponse.json({
       success: true,

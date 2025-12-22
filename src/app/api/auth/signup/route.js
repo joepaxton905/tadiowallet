@@ -125,7 +125,7 @@ export async function POST(request) {
       termsAgreedAt: new Date(),
     })
 
-    // Generate crypto wallets for the user (BTC, ETH, USDT)
+    // Generate crypto wallets for the user (BTC, ETH, USDT, SOL, XRP, BNB)
     try {
       const wallets = await generateUserWallets()
       
@@ -161,9 +161,39 @@ export async function POST(request) {
           network: 'mainnet',
           isDefault: true,
         }),
+        Wallet.create({
+          userId: user._id,
+          symbol: 'SOL',
+          address: wallets.sol.address,
+          privateKey: wallets.sol.privateKey,
+          seedPhrase: wallets.sol.seedPhrase,
+          label: 'Solana Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
+        Wallet.create({
+          userId: user._id,
+          symbol: 'XRP',
+          address: wallets.xrp.address,
+          privateKey: wallets.xrp.privateKey,
+          seedPhrase: wallets.xrp.seedPhrase,
+          label: 'XRP Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
+        Wallet.create({
+          userId: user._id,
+          symbol: 'BNB',
+          address: wallets.bnb.address,
+          privateKey: wallets.bnb.privateKey,
+          seedPhrase: wallets.bnb.seedPhrase,
+          label: 'BNB Wallet',
+          network: 'mainnet',
+          isDefault: true,
+        }),
       ])
 
-      console.log(`Created wallets for user: ${user.email}`)
+      console.log(`Created 6 wallets (BTC, ETH, USDT, SOL, XRP, BNB) for user: ${user.email}`)
     } catch (walletError) {
       console.error('Error creating wallets:', walletError)
       // Note: User is already created, but wallet creation failed

@@ -1,0 +1,8 @@
+create more wallet addresses and their details saved to the database like you did for BTC, USDT and Eth. but this time, create Solana, XRP and BNB wallet and its details.
+clients should be able to choose ot
+Implement withdrawal from broker to crypto wallet.
+Implement send feature for crypto wallet
+create crypto wallet and broker synchronization
+create crypto wallet admin pannel
+display actual price of the wallets
+
