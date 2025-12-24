@@ -10,7 +10,7 @@ export default function Header({ onMenuClick }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(20)
 
   return (
-    <header className="sticky top-0 z-30 h-20 bg-dark-950/80 backdrop-blur-xl border-b border-white/5">
+    <header className="sticky top-0 z-20 h-20 bg-dark-950/80 backdrop-blur-xl border-b border-white/5">
       <div className="flex items-center justify-between h-full px-4 lg:px-8">
         {/* Left Section */}
         <div className="flex items-center gap-4">

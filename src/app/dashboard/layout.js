@@ -12,14 +12,12 @@ export default function DashboardLayout({ children }) {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-dark-950">
-        {/* Sidebar - Hidden on mobile, visible on desktop */}
-        <div className="hidden lg:block">
-          <Sidebar isOpen={true} onClose={() => {}} />
-        </div>
+      <div className="min-h-screen bg-dark-950">
+        {/* Sidebar - Always visible on desktop (fixed), toggle on mobile */}
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 w-full">
+        {/* Main Content - Adjusted for fixed sidebar on desktop */}
+        <div className="flex flex-col min-h-screen lg:ml-72 relative" style={{ zIndex: 1 }}>
           {/* Desktop Header - Hidden on mobile */}
           <div className="hidden lg:block">
             <Header onMenuClick={() => setSidebarOpen(true)} />

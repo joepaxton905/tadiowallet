@@ -99,9 +99,15 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed top-0 left-0 z-50 h-full w-72 bg-dark-900/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-300 lg:translate-x-0 lg:static lg:z-0',
+          'fixed top-0 left-0 z-50 h-screen w-72 border-r border-white/5 transition-transform duration-300',
+          'lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 28, 0.98) 100%)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        }}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
