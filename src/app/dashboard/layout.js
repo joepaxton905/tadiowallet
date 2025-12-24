@@ -17,7 +17,10 @@ export default function DashboardLayout({ children }) {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
         {/* Main Content - Adjusted for fixed sidebar on desktop */}
-        <div className="flex flex-col min-h-screen lg:ml-72 relative" style={{ zIndex: 1 }}>
+        <div 
+          className="flex flex-col min-h-screen lg:ml-72"
+          style={{ isolation: 'isolate' }}
+        >
           {/* Desktop Header - Hidden on mobile */}
           <div className="hidden lg:block">
             <Header onMenuClick={() => setSidebarOpen(true)} />
