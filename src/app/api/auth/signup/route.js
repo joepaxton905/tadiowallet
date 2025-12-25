@@ -125,18 +125,42 @@ export async function POST(request) {
       termsAgreedAt: new Date(),
     })
 
-    // Generate crypto wallets for the user (BTC, ETH, USDT, SOL, XRP, BNB)
+    // Generate crypto wallets for the user using ONE seed phrase
+    // This follows BIP-44 standard for multi-coin wallets
     try {
       const wallets = await generateUserWallets()
       
+      // Validate wallet generation
+      if (!wallets || !wallets.seedPhrase) {
+        throw new Error('Failed to generate wallets - no seed phrase returned')
+      }
+      
+      // Validate all wallet addresses
+      if (!wallets.btc?.address || !wallets.eth?.address || !wallets.usdt?.address ||
+          !wallets.sol?.address || !wallets.xrp?.address || !wallets.bnb?.address) {
+        throw new Error('Failed to generate all wallet addresses')
+      }
+      
+      console.log('Wallet generation successful:', {
+        btc: wallets.btc.address,
+        eth: wallets.eth.address,
+        usdt: wallets.usdt.address,
+        sol: wallets.sol.address,
+        xrp: wallets.xrp.address,
+        bnb: wallets.bnb.address,
+      })
+      
+      // wallets.seedPhrase is the MASTER seed for ALL wallets
+      // All 6 wallets (BTC, ETH, USDT, SOL, XRP, BNB) are derived from this ONE seed
+      
       // Create wallet records in database
-      await Promise.all([
+      const createdWallets = await Promise.all([
         Wallet.create({
           userId: user._id,
           symbol: 'BTC',
           address: wallets.btc.address,
           privateKey: wallets.btc.privateKey,
-          seedPhrase: wallets.btc.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Master seed phrase
           label: 'Bitcoin Wallet',
           network: 'mainnet',
           isDefault: true,
@@ -146,7 +170,7 @@ export async function POST(request) {
           symbol: 'ETH',
           address: wallets.eth.address,
           privateKey: wallets.eth.privateKey,
-          seedPhrase: wallets.eth.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Same master seed
           label: 'Ethereum Wallet',
           network: 'mainnet',
           isDefault: true,
@@ -156,7 +180,7 @@ export async function POST(request) {
           symbol: 'USDT',
           address: wallets.usdt.address,
           privateKey: wallets.usdt.privateKey,
-          seedPhrase: wallets.usdt.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Same master seed
           label: 'USDT Wallet',
           network: 'mainnet',
           isDefault: true,
@@ -166,7 +190,7 @@ export async function POST(request) {
           symbol: 'SOL',
           address: wallets.sol.address,
           privateKey: wallets.sol.privateKey,
-          seedPhrase: wallets.sol.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Same master seed
           label: 'Solana Wallet',
           network: 'mainnet',
           isDefault: true,
@@ -176,7 +200,7 @@ export async function POST(request) {
           symbol: 'XRP',
           address: wallets.xrp.address,
           privateKey: wallets.xrp.privateKey,
-          seedPhrase: wallets.xrp.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Same master seed
           label: 'XRP Wallet',
           network: 'mainnet',
           isDefault: true,
@@ -186,18 +210,44 @@ export async function POST(request) {
           symbol: 'BNB',
           address: wallets.bnb.address,
           privateKey: wallets.bnb.privateKey,
-          seedPhrase: wallets.bnb.seedPhrase,
+          seedPhrase: wallets.seedPhrase, // Same master seed
           label: 'BNB Wallet',
           network: 'mainnet',
           isDefault: true,
         }),
       ])
 
-      console.log(`Created 6 wallets (BTC, ETH, USDT, SOL, XRP, BNB) for user: ${user.email}`)
+      console.log(`✅ Successfully created ${createdWallets.length} wallets (BTC, ETH, USDT, SOL, XRP, BNB) from ONE master seed for user: ${user.email}`)
+      console.log('Wallet IDs:', createdWallets.map(w => ({ symbol: w.symbol, id: w._id.toString() })))
+      
+      // Verify wallets were actually saved to database
+      const savedWallets = await Wallet.find({ userId: user._id })
+      console.log(`✅ Verified: ${savedWallets.length} wallets found in database for user ${user.email}`)
+      
+      if (savedWallets.length !== 6) {
+        throw new Error(`Expected 6 wallets but only ${savedWallets.length} were saved to database`)
+      }
+      
     } catch (walletError) {
-      console.error('Error creating wallets:', walletError)
-      // Note: User is already created, but wallet creation failed
-      // You might want to handle this differently in production
+      console.error('❌ Error creating wallets:', walletError)
+      console.error('Stack trace:', walletError.stack)
+      
+      // Clean up user if wallet creation fails
+      try {
+        await User.findByIdAndDelete(user._id)
+        console.log('Rolled back user creation due to wallet generation failure')
+      } catch (rollbackError) {
+        console.error('Failed to rollback user creation:', rollbackError)
+      }
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Failed to create crypto wallets. Please try again.',
+          details: walletError.message
+        },
+        { status: 500 }
+      )
     }
 
     // Generate auth response with token
