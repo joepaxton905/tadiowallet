@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Wallet from '@/models/Wallet'
 import { verifyToken } from '@/lib/auth'
+import { 
+  generateBTCWalletFromSeed, 
+  generateETHWalletFromSeed, 
+  generateSOLWalletFromSeed,
+  generateMnemonic 
+} from '@/lib/walletGenerator'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,14 +94,68 @@ export async function POST(request) {
       )
     }
 
-    // If no address provided, generate a mock one
-    const walletAddress = address || Wallet.generateMockAddress(symbol)
+    let walletAddress = address
+    let privateKey = null
+    let seedPhrase = null
+
+    // If no address provided, generate a real one for supported coins
+    if (!walletAddress) {
+      // Try to get existing seed phrase from any user wallet
+      const existingWallet = await Wallet.findOne({ userId: decoded.userId })
+        .select('+seedPhrase')
+        .lean()
+      
+      // Use existing seed phrase or generate new one
+      const mnemonic = existingWallet?.seedPhrase || generateMnemonic()
+      seedPhrase = mnemonic
+
+      try {
+        // Generate real wallet addresses for supported coins
+        switch (symbol.toUpperCase()) {
+          case 'BTC': {
+            const btcWallet = await generateBTCWalletFromSeed(mnemonic)
+            walletAddress = btcWallet.address
+            privateKey = btcWallet.privateKey
+            break
+          }
+          case 'ETH': {
+            const ethWallet = await generateETHWalletFromSeed(mnemonic)
+            walletAddress = ethWallet.address
+            privateKey = ethWallet.privateKey
+            break
+          }
+          case 'USDT': {
+            // USDT uses Ethereum address (ERC-20)
+            const usdtWallet = await generateETHWalletFromSeed(mnemonic)
+            walletAddress = usdtWallet.address
+            privateKey = usdtWallet.privateKey
+            break
+          }
+          case 'SOL': {
+            const solWallet = await generateSOLWalletFromSeed(mnemonic)
+            walletAddress = solWallet.address
+            privateKey = solWallet.privateKey
+            break
+          }
+          // For other coins not yet supported by wallet generator, use mock addresses
+          default:
+            walletAddress = Wallet.generateMockAddress(symbol)
+            console.log(`Generated mock address for ${symbol} - real wallet generation not yet implemented`)
+        }
+      } catch (error) {
+        console.error(`Error generating ${symbol} wallet:`, error)
+        // Fallback to mock address if generation fails
+        walletAddress = Wallet.generateMockAddress(symbol)
+      }
+    }
 
     const wallet = await Wallet.upsertWallet(
       decoded.userId,
       symbol,
       walletAddress,
-      label || 'Main Wallet'
+      label || 'Main Wallet',
+      privateKey,
+      seedPhrase
     )
 
     return NextResponse.json({

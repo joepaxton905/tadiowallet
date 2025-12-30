@@ -4,7 +4,10 @@ manually install packages(write to package.json file) when needed.
 do not recreate what has already been created. build on top of what already exists
 save to database what is supposed to be saved in there and not to localstorage.
 make sure you understand what this project is all about before attempting any tasks, do not ruin my hard work.
-TASK: redo the dashboard page. not the entire dashboard board section. just the main dashboard page. the current ui/ux created by you is very hideous. do better, it must be amazing, professional and beautiful.
+TASK: display the actual user's wallet address from the database to the @src/app/dashboard/receive page.
+
+
+redo the dashboard page. not the entire dashboard board section. just the main dashboard page. the current ui/ux created by you is very hideous. do better, it must be amazing, professional and beautiful.
 
 
 
@@ -15,3 +18,5 @@ now fetch the user's actual live data from the database and display it at the fr
 
 
 cd "Z:\tadiowallet" && node scripts/seed-database.js
+
+

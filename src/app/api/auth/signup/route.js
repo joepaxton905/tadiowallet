@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/models/User'
 import Wallet from '@/models/Wallet'
+import Portfolio from '@/models/Portfolio'
+import UserStats from '@/models/UserStats'
 import { validatePassword, createAuthResponse } from '@/lib/auth'
 import { generateUserWallets } from '@/lib/walletGenerator'
 
@@ -227,15 +229,90 @@ export async function POST(request) {
       if (savedWallets.length !== 6) {
         throw new Error(`Expected 6 wallets but only ${savedWallets.length} were saved to database`)
       }
+
+      // Initialize Portfolio entries with 0 holdings for each crypto
+      console.log('📊 Initializing portfolio entries...')
+      const portfolioEntries = await Promise.all([
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'BTC',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'ETH',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'USDT',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'SOL',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'XRP',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+        Portfolio.create({
+          userId: user._id,
+          symbol: 'BNB',
+          holdings: 0,
+          averageBuyPrice: 0,
+        }),
+      ])
+      console.log(`✅ Created ${portfolioEntries.length} portfolio entries`)
+
+      // Initialize UserStats with default values
+      console.log('📈 Initializing user stats...')
+      const userStats = await UserStats.create({
+        userId: user._id,
+        portfolioValue: 0,
+        totalBalance: 0,
+        totalInvested: 0,
+        profitLoss: 0,
+        profitLossPercentage: 0,
+        totalTransactions: 0,
+        completedTransactions: 0,
+        pendingTransactions: 0,
+        failedTransactions: 0,
+        buyTransactions: 0,
+        sellTransactions: 0,
+        sendTransactions: 0,
+        receiveTransactions: 0,
+        swapTransactions: 0,
+        totalVolume: 0,
+        totalFees: 0,
+        numberOfAssets: 0,
+        largestHolding: { symbol: '', value: 0 },
+        lastTransactionDate: null,
+        accountAge: 0,
+        lastCalculated: new Date(),
+      })
+      console.log(`✅ User stats initialized for ${user.email}`)
       
     } catch (walletError) {
-      console.error('❌ Error creating wallets:', walletError)
+      console.error('❌ Error creating wallets/portfolio/stats:', walletError)
       console.error('Stack trace:', walletError.stack)
       
-      // Clean up user if wallet creation fails
+      // Clean up user, wallets, portfolio, and stats if creation fails
       try {
-        await User.findByIdAndDelete(user._id)
-        console.log('Rolled back user creation due to wallet generation failure')
+        await Promise.all([
+          User.findByIdAndDelete(user._id),
+          Wallet.deleteMany({ userId: user._id }),
+          Portfolio.deleteMany({ userId: user._id }),
+          UserStats.deleteOne({ userId: user._id }),
+        ])
+        console.log('Rolled back user creation and all related data due to initialization failure')
       } catch (rollbackError) {
         console.error('Failed to rollback user creation:', rollbackError)
       }
@@ -243,7 +320,7 @@ export async function POST(request) {
       return NextResponse.json(
         { 
           success: false,
-          error: 'Failed to create crypto wallets. Please try again.',
+          error: 'Failed to initialize user account. Please try again.',
           details: walletError.message
         },
         { status: 500 }

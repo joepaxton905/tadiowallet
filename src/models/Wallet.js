@@ -18,6 +18,11 @@ const walletSchema = new mongoose.Schema({
     required: [true, 'Wallet address is required'],
     trim: true,
   },
+  balance: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   privateKey: {
     type: String,
     required: false,
