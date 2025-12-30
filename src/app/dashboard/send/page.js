@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePortfolio } from '@/hooks/useUserData'
 import { useMarketData } from '@/hooks/useCryptoPrices'
@@ -56,63 +56,19 @@ export default function SendPage() {
   const [sendSuccess, setSendSuccess] = useState(false)
 
   const estimatedValue = amount && selectedAsset ? parseFloat(amount) * selectedAsset.price : 0
-  const networkFee = selectedAsset ? 0.0001 * selectedAsset.price : 0
   
-  // Show loading skeleton while data is loading
-  if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="glass-card p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-dark-700 rounded w-1/2" />
-            <div className="h-20 bg-dark-700 rounded" />
-            <div className="h-20 bg-dark-700 rounded" />
-          </div>
-        </div>
-      </div>
-    )
+  // Calculate network fee (0.1% of transaction value, min $0.01, max $10)
+  const calculateFee = () => {
+    if (!estimatedValue) return 0
+    const feePercentage = 0.001 // 0.1%
+    const calculatedFee = estimatedValue * feePercentage
+    return Math.max(0.01, Math.min(10, calculatedFee))
   }
   
-  // Show empty state if user has no assets
-  if (assets.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="hidden lg:block text-center">
-          <h1 className="text-2xl font-heading font-bold text-white">Send Crypto</h1>
-          <p className="text-dark-400">Transfer cryptocurrency to any wallet address</p>
-        </div>
-        
-        <div className="glass-card p-8 sm:p-12 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-500/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No Assets to Send</h3>
-          <p className="text-dark-400 mb-6">
-            You don't have any cryptocurrency in your portfolio yet.
-          </p>
-          <a
-            href="/dashboard/trade"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Buy Crypto
-          </a>
-        </div>
-      </div>
-    )
-  }
-  
-  // Ensure selectedAsset is set
-  if (!selectedAsset && assets.length > 0) {
-    return null // Will be set by useEffect on next render
-  }
+  const networkFee = calculateFee()
 
   // Validate recipient address
-  const validateAddress = async () => {
+  const validateAddress = useCallback(async () => {
     if (!recipient || !selectedAsset) return
     
     setValidatingAddress(true)
@@ -131,7 +87,7 @@ export default function SendPage() {
     } finally {
       setValidatingAddress(false)
     }
-  }
+  }, [recipient, selectedAsset])
 
   const handleContinue = async () => {
     if (step === 1 && recipient && amount && selectedAsset) {
@@ -189,8 +145,60 @@ export default function SendPage() {
       setRecipientInfo(null)
       setAddressError('')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipient, selectedAsset])
+  }, [recipient, selectedAsset, validateAddress])
+  
+  // Show loading skeleton while data is loading
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="glass-card p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-dark-700 rounded w-1/2" />
+            <div className="h-20 bg-dark-700 rounded" />
+            <div className="h-20 bg-dark-700 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  // Show empty state if user has no assets
+  if (assets.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="hidden lg:block text-center">
+          <h1 className="text-2xl font-heading font-bold text-white">Send Crypto</h1>
+          <p className="text-dark-400">Transfer cryptocurrency to any wallet address</p>
+        </div>
+        
+        <div className="glass-card p-8 sm:p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-500/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">No Assets to Send</h3>
+          <p className="text-dark-400 mb-6">
+            You don't have any cryptocurrency in your portfolio yet.
+          </p>
+          <a
+            href="/dashboard/trade"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-dark-950 font-semibold rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Buy Crypto
+          </a>
+        </div>
+      </div>
+    )
+  }
+  
+  // Ensure selectedAsset is set
+  if (!selectedAsset && assets.length > 0) {
+    return null // Will be set by useEffect on next render
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
@@ -411,7 +419,10 @@ export default function SendPage() {
               <span className="text-white">{selectedAsset.name} Network</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-dark-400">Network Fee</span>
+              <span className="text-dark-400">
+                Transfer Fee 
+                <span className="text-xs text-dark-500 ml-1">(0.1%)</span>
+              </span>
               <span className="text-white">~${networkFee.toFixed(2)}</span>
             </div>
             <div className="flex items-center justify-between pt-3 border-t border-white/5">

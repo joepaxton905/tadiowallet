@@ -7,9 +7,23 @@ import User from '@/models/User'
 import Notification from '@/models/Notification'
 import { verifyToken } from '@/lib/auth'
 import { queueStatsUpdate } from '@/lib/updateUserStats'
+import { getSimplePrices } from '@/lib/crypto'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
+
+// Supported assets for internal transfers
+const SUPPORTED_ASSETS = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'XRP']
+
+// Minimum transfer amounts (to prevent dust attacks and spam)
+const MIN_TRANSFER_AMOUNTS = {
+  'BTC': 0.0001,    // ~$4 at $40k
+  'ETH': 0.001,     // ~$2 at $2k
+  'USDT': 1,        // $1
+  'BNB': 0.01,      // ~$3 at $300
+  'SOL': 0.01,      // ~$1 at $100
+  'XRP': 1,         // ~$0.60 at $0.60
+}
 
 /**
  * POST /api/transactions/transfer
@@ -57,16 +71,48 @@ export async function POST(request) {
       )
     }
 
-    // Validate amount
-    const transferAmount = parseFloat(amount)
-    if (isNaN(transferAmount) || transferAmount <= 0) {
+    // Validate asset is supported
+    const assetSymbol = asset.toUpperCase()
+    if (!SUPPORTED_ASSETS.includes(assetSymbol)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid amount' },
+        { 
+          success: false, 
+          error: `Asset ${assetSymbol} is not supported for internal transfers. Supported assets: ${SUPPORTED_ASSETS.join(', ')}` 
+        },
         { status: 400 }
       )
     }
 
-    const assetSymbol = asset.toUpperCase()
+    // Validate amount
+    const transferAmount = parseFloat(amount)
+    if (isNaN(transferAmount) || transferAmount <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Amount must be greater than zero' },
+        { status: 400 }
+      )
+    }
+
+    // Validate precision (max 8 decimal places for crypto)
+    const decimalPlaces = (transferAmount.toString().split('.')[1] || '').length
+    if (decimalPlaces > 8) {
+      return NextResponse.json(
+        { success: false, error: 'Amount cannot have more than 8 decimal places' },
+        { status: 400 }
+      )
+    }
+
+    // Validate minimum transfer amount
+    const minAmount = MIN_TRANSFER_AMOUNTS[assetSymbol] || 0.00000001
+    if (transferAmount < minAmount) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Minimum transfer amount for ${assetSymbol} is ${minAmount} ${assetSymbol}` 
+        },
+        { status: 400 }
+      )
+    }
+
     const senderId = decoded.userId
 
     // Start transaction session
@@ -104,10 +150,37 @@ export async function POST(request) {
         symbol: assetSymbol 
       }).session(session)
 
-      if (!senderPortfolio || senderPortfolio.holdings < transferAmount) {
+      if (!senderPortfolio) {
         await session.abortTransaction()
         return NextResponse.json(
-          { success: false, error: 'Insufficient balance' },
+          { 
+            success: false, 
+            error: `You don't have any ${assetSymbol} in your portfolio. Please buy some first.` 
+          },
+          { status: 400 }
+        )
+      }
+
+      if (senderPortfolio.holdings < transferAmount) {
+        await session.abortTransaction()
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Insufficient balance. You have ${senderPortfolio.holdings.toFixed(8)} ${assetSymbol}, trying to send ${transferAmount.toFixed(8)} ${assetSymbol}` 
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check if user is trying to send exact balance (leave small buffer for UI display)
+      const remainingBalance = senderPortfolio.holdings - transferAmount
+      if (remainingBalance > 0 && remainingBalance < 0.00000001) {
+        await session.abortTransaction()
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Amount would leave a dust balance. Please send your full balance or leave a meaningful amount.' 
+          },
           { status: 400 }
         )
       }
@@ -133,15 +206,33 @@ export async function POST(request) {
         isDefault: true
       }).session(session)
 
-      // 4. Get asset details for transaction records
-      // In a real app, you might fetch this from an external API
-      // For now, we'll use a simple mapping
+      // 4. Get asset details and real-time price
       const assetDetails = getAssetDetails(assetSymbol)
 
-      // Calculate mock price (in real app, fetch from market data)
-      const mockPrice = getMockPrice(assetSymbol)
-      const transactionValue = transferAmount * mockPrice
-      const networkFee = 0.0001 * mockPrice // Mock network fee
+      // Fetch real-time price from market data
+      let currentPrice = 0
+      try {
+        const priceData = await getSimplePrices([assetSymbol])
+        currentPrice = priceData[0]?.price || 0
+      } catch (error) {
+        console.error('Error fetching price, using fallback:', error)
+        currentPrice = getFallbackPrice(assetSymbol)
+      }
+
+      if (currentPrice === 0) {
+        await session.abortTransaction()
+        return NextResponse.json(
+          { success: false, error: 'Unable to fetch current market price. Please try again.' },
+          { status: 503 }
+        )
+      }
+
+      const transactionValue = transferAmount * currentPrice
+      
+      // Calculate network fee (0.1% of transaction value, min $0.01, max $10)
+      const feePercentage = 0.001 // 0.1%
+      const calculatedFee = transactionValue * feePercentage
+      const networkFee = Math.max(0.01, Math.min(10, calculatedFee))
 
       // 5. Update portfolios
       // Deduct from sender
@@ -184,7 +275,7 @@ export async function POST(request) {
         assetIcon: assetDetails.icon,
         assetColor: assetDetails.color,
         amount: transferAmount,
-        price: mockPrice,
+        price: currentPrice,
         value: transactionValue,
         fee: networkFee,
         status: 'completed',
@@ -203,7 +294,7 @@ export async function POST(request) {
         assetIcon: assetDetails.icon,
         assetColor: assetDetails.color,
         amount: transferAmount,
-        price: mockPrice,
+        price: currentPrice,
         value: transactionValue,
         fee: 0, // Recipient doesn't pay fee
         status: 'completed',
@@ -393,26 +484,24 @@ function getAssetDetails(symbol) {
     'DOGE': { name: 'Dogecoin', icon: 'Ð', color: '#C3A634' },
     'DOT': { name: 'Polkadot', icon: '●', color: '#E6007A' },
     'MATIC': { name: 'Polygon', icon: '◇', color: '#8247E5' },
+    'AVAX': { name: 'Avalanche', icon: '▲', color: '#E84142' },
+    'LINK': { name: 'Chainlink', icon: '⬡', color: '#2A5ADA' },
   }
 
   return assetMap[symbol] || { name: symbol, icon: '●', color: '#888888' }
 }
 
-// Helper function to get mock price
-function getMockPrice(symbol) {
-  const priceMap = {
-    'BTC': 43250.00,
-    'ETH': 2280.50,
+// Helper function to get fallback price if API fails
+function getFallbackPrice(symbol) {
+  const fallbackPrices = {
+    'BTC': 43000.00,
+    'ETH': 2280.00,
     'USDT': 1.00,
-    'BNB': 305.75,
-    'SOL': 98.40,
+    'BNB': 305.00,
+    'SOL': 98.00,
     'XRP': 0.62,
-    'ADA': 0.58,
-    'DOGE': 0.085,
-    'DOT': 7.25,
-    'MATIC': 0.85,
   }
 
-  return priceMap[symbol] || 1.00
+  return fallbackPrices[symbol] || 1.00
 }
 

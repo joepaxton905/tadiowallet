@@ -6,3 +6,7 @@ create crypto wallet and broker synchronization
 create crypto wallet admin pannel
 display actual price of the wallets
 
+
+i am sure that by now you know how this project is structured
+
+i am sure that by now you understand the codebase of this project. now make users be able to send coins/funds to ONLY  users of the platform via usdt, btc, eth, bnb, sol, xrp.
