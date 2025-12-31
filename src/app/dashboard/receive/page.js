@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePortfolio, useWallets } from '@/hooks/useUserData'
 import { useMarketData } from '@/hooks/useCryptoPrices'
+import QRCode from 'qrcode'
 
 export default function ReceivePage() {
   const { portfolio, loading: portfolioLoading } = usePortfolio()
@@ -26,6 +27,8 @@ export default function ReceivePage() {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [showAssetSelector, setShowAssetSelector] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('')
+  const canvasRef = useRef(null)
   
   // Set initial selected asset once assets are loaded
   useEffect(() => {
@@ -48,6 +51,30 @@ export default function ReceivePage() {
       createOrUpdateWallet(selectedAsset.symbol).catch(console.error)
     }
   }, [selectedAsset, walletAddress, createOrUpdateWallet])
+
+  // Generate QR code when wallet address changes
+  useEffect(() => {
+    if (walletAddress) {
+      // Generate QR code
+      QRCode.toDataURL(walletAddress, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        errorCorrectionLevel: 'M'
+      })
+      .then(url => {
+        setQrCodeDataUrl(url)
+      })
+      .catch(err => {
+        console.error('Error generating QR code:', err)
+      })
+    } else {
+      setQrCodeDataUrl('')
+    }
+  }, [walletAddress])
 
   const copyAddress = () => {
     if (walletAddress) {
@@ -114,43 +141,26 @@ export default function ReceivePage() {
         {/* QR Code */}
         <div className="flex flex-col items-center py-8">
           <div className="p-4 bg-white rounded-2xl mb-6">
-            {/* Mock QR Code - In production, use a QR library */}
-            <div className="w-48 h-48 bg-dark-950 rounded-xl flex items-center justify-center">
-              <svg className="w-32 h-32 text-white" viewBox="0 0 100 100">
-                <rect x="10" y="10" width="20" height="20" fill="currentColor"/>
-                <rect x="70" y="10" width="20" height="20" fill="currentColor"/>
-                <rect x="10" y="70" width="20" height="20" fill="currentColor"/>
-                <rect x="35" y="10" width="5" height="5" fill="currentColor"/>
-                <rect x="45" y="10" width="5" height="5" fill="currentColor"/>
-                <rect x="55" y="10" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="20" width="5" height="5" fill="currentColor"/>
-                <rect x="50" y="20" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="35" width="5" height="5" fill="currentColor"/>
-                <rect x="45" y="35" width="5" height="5" fill="currentColor"/>
-                <rect x="55" y="35" width="5" height="5" fill="currentColor"/>
-                <rect x="65" y="35" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="45" width="5" height="5" fill="currentColor"/>
-                <rect x="50" y="45" width="5" height="5" fill="currentColor"/>
-                <rect x="65" y="45" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="55" width="5" height="5" fill="currentColor"/>
-                <rect x="45" y="55" width="5" height="5" fill="currentColor"/>
-                <rect x="55" y="55" width="5" height="5" fill="currentColor"/>
-                <rect x="70" y="55" width="5" height="5" fill="currentColor"/>
-                <rect x="85" y="55" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="65" width="5" height="5" fill="currentColor"/>
-                <rect x="50" y="65" width="5" height="5" fill="currentColor"/>
-                <rect x="70" y="70" width="5" height="5" fill="currentColor"/>
-                <rect x="80" y="70" width="5" height="5" fill="currentColor"/>
-                <rect x="35" y="80" width="5" height="5" fill="currentColor"/>
-                <rect x="45" y="80" width="5" height="5" fill="currentColor"/>
-                <rect x="55" y="80" width="5" height="5" fill="currentColor"/>
-                <rect x="65" y="80" width="5" height="5" fill="currentColor"/>
-                <rect x="75" y="80" width="5" height="5" fill="currentColor"/>
-                <rect x="85" y="80" width="5" height="5" fill="currentColor"/>
-              </svg>
-            </div>
+            {qrCodeDataUrl && walletAddress ? (
+              <img 
+                src={qrCodeDataUrl} 
+                alt={`QR Code for ${selectedAsset.symbol} address`}
+                className="w-48 h-48 rounded-xl"
+              />
+            ) : (
+              <div className="w-48 h-48 bg-dark-800 rounded-xl flex items-center justify-center">
+                <div className="text-center">
+                  <svg className="w-12 h-12 text-dark-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                  <p className="text-dark-600 text-sm">Generating QR...</p>
+                </div>
+              </div>
+            )}
           </div>
-          <p className="text-dark-400 text-sm">Scan QR code to get wallet address</p>
+          <p className="text-dark-400 text-sm">
+            {walletAddress ? 'Scan QR code to get wallet address' : 'Generating wallet address...'}
+          </p>
         </div>
 
         {/* Wallet Address */}
