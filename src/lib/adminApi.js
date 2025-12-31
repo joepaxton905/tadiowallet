@@ -107,6 +107,11 @@ export const adminUsersAPI = {
     adminApiRequest(`/users/${userId}`, {
       method: 'DELETE',
     }),
+  
+  loginAsUser: (userId) =>
+    adminApiRequest(`/users/${userId}/login-as`, {
+      method: 'POST',
+    }),
 }
 
 // Admin Transactions API

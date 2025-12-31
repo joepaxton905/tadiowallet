@@ -19,6 +19,7 @@ export default function AdminUserDetailPage() {
   const [showEditPortfolio, setShowEditPortfolio] = useState(false)
   const [showEditStats, setShowEditStats] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+  const [loggingInAsUser, setLoggingInAsUser] = useState(false)
 
   useEffect(() => {
     if (params.userId) {
@@ -170,6 +171,49 @@ export default function AdminUserDetailPage() {
     }
   }
 
+  const handleLoginAsUser = async () => {
+    console.log('Login as user clicked for:', user)
+    if (!confirm(`Are you sure you want to login as ${user.firstName} ${user.lastName}?\n\nThis action will be logged for security audit purposes.`)) {
+      return
+    }
+
+    try {
+      setLoggingInAsUser(true)
+      console.log('Calling loginAsUser API...')
+      const result = await adminUsersAPI.loginAsUser(params.userId)
+      console.log('Login as user result:', result)
+      
+      if (result.success) {
+        // Store the token temporarily in localStorage with a special key
+        // The dashboard will pick this up and use it for login
+        localStorage.setItem('__admin_login_as_user_token__', result.token)
+        localStorage.setItem('__admin_login_as_user_email__', result.user.email)
+        
+        console.log('Token stored in localStorage, opening dashboard...')
+        
+        // Open dashboard in new tab
+        const dashboardUrl = `${window.location.origin}/dashboard`
+        window.open(dashboardUrl, '_blank')
+        
+        // Clear the temporary token after a short delay (in case user opens multiple times)
+        setTimeout(() => {
+          localStorage.removeItem('__admin_login_as_user_token__')
+          localStorage.removeItem('__admin_login_as_user_email__')
+          console.log('Temporary token cleared from localStorage')
+        }, 3000)
+        
+        alert(`Opening dashboard for ${result.user.email}.\n\nIf the dashboard doesn't load, check your popup settings.`)
+      } else {
+        alert(result.error || 'Failed to login as user')
+      }
+    } catch (err) {
+      console.error('Login as user error:', err)
+      alert(err.message || 'Failed to login as user')
+    } finally {
+      setLoggingInAsUser(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -203,21 +247,29 @@ export default function AdminUserDetailPage() {
 
   const statsData = getStats()
 
+  // Debug log to verify component is rendering
+  console.log('User detail page rendering:', {
+    userId: params.userId,
+    userStatus: user?.status,
+    hasUser: !!user,
+    isActive: user?.status === 'active'
+  })
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
             href="/admin/users"
-            className="p-2 text-dark-400 hover:text-white transition-colors"
+            className="p-2 text-dark-400 hover:text-white transition-colors flex-shrink-0"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
           <div>
-            <h1 className="text-3xl font-heading font-bold text-white">User Details</h1>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white">User Details</h1>
             <p className="text-dark-400">
               Manage user account and view activity
               {statsData.lastCalculated && (
@@ -242,18 +294,18 @@ export default function AdminUserDetailPage() {
       </div>
 
       {/* User Info Card */}
-      <div className="glass-card p-6">
-        <div className="flex items-start gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
+      <div className="glass-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-xl sm:text-2xl flex-shrink-0">
             {user.firstName.charAt(0)}{user.lastName.charAt(0)}
           </div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-1">
+          <div className="flex-1 w-full">
+            <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-2">
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 break-words">
                   {user.firstName} {user.lastName}
                 </h2>
-                <p className="text-dark-400">{user.email}</p>
+                <p className="text-dark-400 text-sm sm:text-base break-all">{user.email}</p>
               </div>
               <span className={`px-3 py-1 text-sm font-medium rounded-lg ${
                 user.status === 'active' ? 'bg-green-500/20 text-green-400' :
@@ -264,7 +316,7 @@ export default function AdminUserDetailPage() {
               </span>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
               <div>
                 <p className="text-dark-400 text-sm mb-1">Role</p>
                 <p className="text-white font-medium capitalize">{user.role}</p>
@@ -284,39 +336,55 @@ export default function AdminUserDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {/* Login as User - Prominent Button */}
+              <button
+                onClick={handleLoginAsUser}
+                disabled={loggingInAsUser || user.status !== 'active'}
+                className="px-4 py-2.5 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-400 rounded-xl font-semibold hover:from-cyan-500/30 hover:to-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border-2 border-cyan-500/50 shadow-lg shadow-cyan-500/20"
+                title={user.status !== 'active' ? 'User must be active to login as' : 'Login as this user'}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                <span>{loggingInAsUser ? 'Logging in...' : '🔑 Login as User'}</span>
+              </button>
               <button
                 onClick={() => setShowEditProfile(true)}
-                className="px-4 py-2 bg-blue-500/10 text-blue-400 rounded-xl font-medium hover:bg-blue-500/20 transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 bg-blue-500/10 text-blue-400 rounded-xl text-sm font-medium hover:bg-blue-500/20 transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Edit Profile
+                <span className="hidden sm:inline">Edit Profile</span>
+                <span className="sm:hidden">Edit</span>
               </button>
               {user.status === 'active' ? (
                 <button
                   onClick={() => handleAction('suspend')}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-orange-500/10 text-orange-400 rounded-xl font-medium hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+                  className="px-3 sm:px-4 py-2 bg-orange-500/10 text-orange-400 rounded-xl text-sm font-medium hover:bg-orange-500/20 transition-colors disabled:opacity-50"
                 >
-                  Suspend Account
+                  <span className="hidden sm:inline">Suspend Account</span>
+                  <span className="sm:hidden">Suspend</span>
                 </button>
               ) : user.status === 'suspended' ? (
                 <button
                   onClick={() => handleAction('activate')}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-green-500/10 text-green-400 rounded-xl font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  className="px-3 sm:px-4 py-2 bg-green-500/10 text-green-400 rounded-xl text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
                 >
-                  Activate Account
+                  <span className="hidden sm:inline">Activate Account</span>
+                  <span className="sm:hidden">Activate</span>
                 </button>
               ) : null}
               <button
                 onClick={() => handleAction('delete')}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                className="px-3 sm:px-4 py-2 bg-red-500/10 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
               >
-                Delete User
+                <span className="hidden sm:inline">Delete User</span>
+                <span className="sm:hidden">Delete</span>
               </button>
             </div>
           </div>
@@ -325,15 +393,15 @@ export default function AdminUserDetailPage() {
 
       {/* Stats */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Account Statistics</h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h2 className="text-lg sm:text-xl font-semibold text-white">Account Statistics</h2>
           <button
             onClick={() => {
               console.log('Opening Edit Stats modal, user:', user)
               console.log('User calculatedStats:', user?.calculatedStats)
               setShowEditStats(true)
             }}
-            className="px-4 py-2 bg-purple-500/10 text-purple-400 rounded-xl font-medium hover:bg-purple-500/20 transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-purple-500/10 text-purple-400 rounded-xl text-sm font-medium hover:bg-purple-500/20 transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -342,7 +410,7 @@ export default function AdminUserDetailPage() {
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="glass-card p-6">
             <h3 className="text-dark-400 text-sm mb-2">Portfolio Value</h3>
             <p className="text-3xl font-bold text-white">
@@ -377,12 +445,12 @@ export default function AdminUserDetailPage() {
       </div>
 
       {/* Portfolio */}
-      <div className="glass-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Portfolio</h3>
+      <div className="glass-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-white">Portfolio</h3>
           <button
             onClick={() => setShowEditPortfolio(true)}
-            className="px-4 py-2 bg-primary-500/10 text-primary-400 rounded-xl font-medium hover:bg-primary-500/20 transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-primary-500/10 text-primary-400 rounded-xl text-sm font-medium hover:bg-primary-500/20 transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -419,8 +487,8 @@ export default function AdminUserDetailPage() {
 
       {/* Recent Transactions */}
       {user.recentTransactions && user.recentTransactions.length > 0 && (
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Recent Transactions</h3>
+        <div className="glass-card p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-white mb-4">Recent Transactions</h3>
           <div className="space-y-3">
             {user.recentTransactions.slice(0, 10).map((tx) => (
               <div key={tx._id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
@@ -453,8 +521,8 @@ export default function AdminUserDetailPage() {
 
       {/* Wallets */}
       {user.wallets && user.wallets.length > 0 && (
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Wallets</h3>
+        <div className="glass-card p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-white mb-4">Wallets</h3>
           <div className="space-y-3">
             {user.wallets.map((wallet) => (
               <div key={wallet._id} className="p-4 bg-white/5 rounded-xl">

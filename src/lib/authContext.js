@@ -18,7 +18,47 @@ export function AuthProvider({ children }) {
 
   const checkAuth = () => {
     try {
-      // Check localStorage first, then sessionStorage
+      // First, check if there's an admin login-as-user token
+      const adminToken = localStorage.getItem('__admin_login_as_user_token__')
+      const adminEmail = localStorage.getItem('__admin_login_as_user_email__')
+      
+      if (adminToken && adminEmail) {
+        console.log('Found admin login token in checkAuth, processing...', adminEmail)
+        
+        try {
+          // Decode the token
+          const tokenParts = adminToken.split('.')
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]))
+            const userData = {
+              _id: payload.userId,
+              email: payload.email,
+              role: payload.role,
+            }
+            
+            // Store in sessionStorage (not localStorage)
+            sessionStorage.setItem('authToken', adminToken)
+            sessionStorage.setItem('user', JSON.stringify(userData))
+            
+            setToken(adminToken)
+            setUser(userData)
+            
+            // Clear the temporary admin token
+            localStorage.removeItem('__admin_login_as_user_token__')
+            localStorage.removeItem('__admin_login_as_user_email__')
+            
+            console.log('Admin login-as-user successful')
+            setLoading(false)
+            return
+          }
+        } catch (err) {
+          console.error('Error processing admin token:', err)
+          localStorage.removeItem('__admin_login_as_user_token__')
+          localStorage.removeItem('__admin_login_as_user_email__')
+        }
+      }
+      
+      // Normal auth check - Check localStorage first, then sessionStorage
       let storedToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
       let storedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
 

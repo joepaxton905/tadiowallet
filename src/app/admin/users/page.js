@@ -84,9 +84,9 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-white mb-2">User Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white mb-2">User Management</h1>
           <p className="text-dark-400">{pagination.total} total users</p>
         </div>
         <button
@@ -96,13 +96,13 @@ export default function AdminUsersPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="glass-card p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm text-dark-400 mb-2">Search</label>
@@ -153,50 +153,50 @@ export default function AdminUsersPage() {
       {/* Users Table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-dark-300">User</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-dark-300">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-dark-300">Portfolio</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-dark-300">Transactions</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-dark-300">Joined</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-dark-300">Actions</th>
+                <th className="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-dark-300">User</th>
+                <th className="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-dark-300">Status</th>
+                <th className="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-dark-300">Portfolio</th>
+                <th className="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-dark-300">Transactions</th>
+                <th className="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-dark-300">Joined</th>
+                <th className="px-4 sm:px-6 py-4 text-right text-sm font-semibold text-dark-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-sm">
                         {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                       </div>
-                      <div>
-                        <p className="text-white font-medium">{user.firstName} {user.lastName}</p>
-                        <p className="text-sm text-dark-400">{user.email}</p>
+                      <div className="min-w-0">
+                        <p className="text-white font-medium truncate">{user.firstName} {user.lastName}</p>
+                        <p className="text-sm text-dark-400 truncate">{user.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     {getStatusBadge(user.status)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div className="text-white">{user.portfolioAssets} assets</div>
                     <div className="text-sm text-dark-400">
                       ${user.totalTransactionValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div className="text-white">{user.totalTransactions}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-dark-300 text-sm">
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="text-dark-300 text-sm whitespace-nowrap">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="flex items-center justify-end gap-2 flex-shrink-0">
                       <Link
                         href={`/admin/users/${user._id}`}
                         className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
@@ -240,23 +240,23 @@ export default function AdminUsersPage() {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-white/10">
-            <div className="text-sm text-dark-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-4 border-t border-white/10">
+            <div className="text-sm text-dark-400 text-center sm:text-left">
               Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 Previous
               </button>
-              <span className="text-white px-4">{pagination.page} of {pagination.pages}</span>
+              <span className="text-white px-2 sm:px-4 text-sm">{pagination.page} of {pagination.pages}</span>
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                 disabled={pagination.page === pagination.pages}
-                className="px-4 py-2 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 Next
               </button>
