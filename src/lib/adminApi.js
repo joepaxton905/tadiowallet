@@ -137,3 +137,53 @@ export const adminUserStatsAPI = {
     }),
 }
 
+// Unified Admin API (all methods in one place)
+export const adminAPI = {
+  // Auth
+  ...adminAuthAPI,
+  
+  // Stats
+  getStats: adminStatsAPI.getStats,
+  
+  // Users
+  getUsers: adminUsersAPI.getAll,
+  getUser: adminUsersAPI.getById,
+  updateUser: adminUsersAPI.update,
+  deleteUser: adminUsersAPI.delete,
+  
+  // Transactions
+  getTransactions: adminTransactionsAPI.getAll,
+  
+  // Analytics
+  getAnalytics: () => adminApiRequest('/analytics'),
+  
+  // Portfolios
+  getPortfolios: (queryString = '') => 
+    adminApiRequest(`/portfolios${queryString ? `?${queryString}` : ''}`),
+  
+  // Activity Logs
+  getActivityLogs: (queryString = '') => 
+    adminApiRequest(`/logs${queryString ? `?${queryString}` : ''}`),
+  
+  createActivityLog: (logData) =>
+    adminApiRequest('/logs', {
+      method: 'POST',
+      body: JSON.stringify(logData),
+    }),
+  
+  // Notifications
+  getNotifications: (queryString = '') => 
+    adminApiRequest(`/notifications${queryString ? `?${queryString}` : ''}`),
+  
+  createBroadcastNotification: (notificationData) =>
+    adminApiRequest('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(notificationData),
+    }),
+  
+  deleteNotifications: (queryString = '') =>
+    adminApiRequest(`/notifications?${queryString}`, {
+      method: 'DELETE',
+    }),
+}
+
