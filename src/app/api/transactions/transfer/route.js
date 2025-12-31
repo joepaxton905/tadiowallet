@@ -10,6 +10,8 @@ import { queueStatsUpdate } from '@/lib/updateUserStats'
 import { getSimplePrices } from '@/lib/crypto'
 import mongoose from 'mongoose'
 
+const { sendTransferSentEmail, sendTransferReceivedEmail } = require('@/lib/email')
+
 export const dynamic = 'force-dynamic'
 
 // Supported assets for internal transfers
@@ -343,6 +345,35 @@ export async function POST(request) {
       // Update stats for both users (non-blocking)
       queueStatsUpdate(senderId)
       queueStatsUpdate(recipientId)
+
+      // Send email notifications (non-blocking)
+      // Don't await these - send in background
+      sendTransferSentEmail({
+        recipientEmail: sender.email,
+        recipientName: `${sender.firstName} ${sender.lastName}`,
+        senderName: `${sender.firstName} ${sender.lastName}`,
+        amount: transferAmount,
+        asset: assetSymbol,
+        assetName: assetDetails.name,
+        value: transactionValue,
+        fee: networkFee,
+        recipientAddress,
+      }).catch(error => {
+        console.error('Error sending transfer sent email:', error)
+      })
+
+      sendTransferReceivedEmail({
+        recipientEmail: recipient.email,
+        recipientName: `${recipient.firstName} ${recipient.lastName}`,
+        senderName: `${sender.firstName} ${sender.lastName}`,
+        amount: transferAmount,
+        asset: assetSymbol,
+        assetName: assetDetails.name,
+        value: transactionValue,
+        senderAddress: senderWallet?.address || 'Unknown',
+      }).catch(error => {
+        console.error('Error sending transfer received email:', error)
+      })
 
       return NextResponse.json({
         success: true,
