@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { config } from '@/lib/config'
 import { useNotifications } from '@/hooks/useUserData'
+import { useAuth } from '@/lib/authContext'
 
 const pageNames = {
   '/dashboard': 'Dashboard',
@@ -21,9 +22,18 @@ export default function MobileHeader() {
   const pathname = usePathname()
   const [showNotifications, setShowNotifications] = useState(false)
   const { notifications, unreadCount } = useNotifications(10)
+  const { user } = useAuth()
   
   const pageName = pageNames[pathname] || 'Dashboard'
   const isHome = pathname === '/dashboard'
+
+  // Get user initials (e.g., "John Doe" => "JD")
+  const getUserInitials = () => {
+    if (!user) return 'U'
+    const firstInitial = user.firstName?.charAt(0)?.toUpperCase() || ''
+    const lastInitial = user.lastName?.charAt(0)?.toUpperCase() || ''
+    return `${firstInitial}${lastInitial}` || 'U'
+  }
 
   return (
     <header className="sticky top-0 z-40 lg:hidden">
@@ -81,8 +91,9 @@ export default function MobileHeader() {
             <Link 
               href="/dashboard/settings"
               className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400/20 to-accent-500/20 flex items-center justify-center border border-white/10"
+              title={user ? `${user.firstName} ${user.lastName}` : 'Profile'}
             >
-              <span className="text-xs font-medium text-white">JD</span>
+              <span className="text-xs font-medium text-white">{getUserInitials()}</span>
             </Link>
           </div>
         </div>

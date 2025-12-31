@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { config } from '@/lib/config'
 import clsx from 'clsx'
+import { useAuth } from '@/lib/authContext'
 
 const navigation = [
   {
@@ -85,6 +86,21 @@ const navigation = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuth()
+
+  // Get user initials (e.g., "John Doe" => "JD")
+  const getUserInitials = () => {
+    if (!user) return 'U'
+    const firstInitial = user.firstName?.charAt(0)?.toUpperCase() || ''
+    const lastInitial = user.lastName?.charAt(0)?.toUpperCase() || ''
+    return `${firstInitial}${lastInitial}` || 'U'
+  }
+
+  const handleLogout = () => {
+    logout()
+    onClose()
+  }
 
   return (
     <>
@@ -205,13 +221,21 @@ export default function Sidebar({ isOpen, onClose }) {
           <div className="p-4 border-t border-white/5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400/20 to-accent-500/20 flex items-center justify-center border border-white/10">
-                <span className="text-sm font-medium text-white">JD</span>
+                <span className="text-sm font-medium text-white">{getUserInitials()}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">John Doe</p>
-                <p className="text-xs text-dark-400 truncate">john@example.com</p>
+                <p className="text-sm font-medium text-white truncate">
+                  {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
+                </p>
+                <p className="text-xs text-dark-400 truncate">
+                  {user?.email || 'user@example.com'}
+                </p>
               </div>
-              <button className="p-2 text-dark-400 hover:text-white transition-colors">
+              <button 
+                onClick={handleLogout}
+                className="p-2 text-dark-400 hover:text-white transition-colors"
+                title="Logout"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
