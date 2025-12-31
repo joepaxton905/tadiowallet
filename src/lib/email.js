@@ -80,6 +80,21 @@ async function sendEmail({ to, subject, html, text }) {
       subject,
       text: text || '', // Plain text fallback
       html,
+      // Anti-spam headers
+      headers: {
+        'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        'X-Mailer': `${COMPANY_NAME} Notification System`,
+        'X-Priority': '1',
+        'Importance': 'high',
+        'X-MSMail-Priority': 'High',
+        'Reply-To': EMAIL_FROM,
+        'Return-Path': EMAIL_FROM,
+        // List headers to avoid spam filters
+        'List-Unsubscribe': `<${APP_URL}/settings>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+      // Message priority
+      priority: 'high',
     })
 
     console.log('✅ Email sent successfully:', info.messageId)
