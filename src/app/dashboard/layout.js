@@ -6,13 +6,15 @@ import Header from '@/components/dashboard/Header'
 import MobileHeader from '@/components/dashboard/MobileHeader'
 import BottomNav from '@/components/dashboard/BottomNav'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import { MarketDataProvider } from '@/lib/marketDataContext'
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-dark-950">
+      <MarketDataProvider>
+        <div className="min-h-screen bg-dark-950">
         {/* Sidebar - Always visible on desktop (fixed), toggle on mobile */}
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
@@ -38,6 +40,7 @@ export default function DashboardLayout({ children }) {
           <BottomNav />
         </div>
       </div>
+      </MarketDataProvider>
     </ProtectedRoute>
   )
 }

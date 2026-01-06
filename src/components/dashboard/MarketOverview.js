@@ -1,14 +1,12 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
-import { useMarketData } from '@/hooks/useCryptoPrices'
+import { useMarketDataContext } from '@/lib/marketDataContext'
 import { formatPrice, formatLargeNumber } from '@/lib/crypto'
 
-export default function MarketOverview() {
-  const { data: marketData, loading } = useMarketData(
-    ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'MATIC'],
-    30000
-  )
+function MarketOverview() {
+  const { marketData, loading } = useMarketDataContext()
 
   return (
     <div className="glass-card overflow-hidden group">
@@ -240,3 +238,6 @@ export default function MarketOverview() {
     </div>
   )
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(MarketOverview)

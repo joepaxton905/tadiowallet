@@ -1,19 +1,24 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getMarketData, getSimplePrices } from '@/lib/crypto'
 
 /**
  * Hook to fetch and auto-refresh cryptocurrency market data
+ * IMPORTANT: Pass a stable array reference or use useMemo for symbols array
  */
 export function useMarketData(symbols, refreshInterval = 30000) {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Stabilize symbols array to prevent infinite loops
+  const symbolsString = useMemo(() => JSON.stringify(symbols), [symbols])
+
   const fetchData = useCallback(async () => {
     try {
-      const result = await getMarketData(symbols)
+      const parsedSymbols = JSON.parse(symbolsString)
+      const result = await getMarketData(parsedSymbols)
       setData(result)
       setError(null)
     } catch (err) {
@@ -21,7 +26,7 @@ export function useMarketData(symbols, refreshInterval = 30000) {
     } finally {
       setLoading(false)
     }
-  }, [symbols])
+  }, [symbolsString])
 
   useEffect(() => {
     fetchData()
@@ -41,9 +46,13 @@ export function useSimplePrices(symbols = ['BTC', 'ETH', 'SOL'], refreshInterval
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Stabilize symbols array to prevent infinite loops
+  const symbolsString = useMemo(() => JSON.stringify(symbols), [symbols])
+
   const fetchPrices = useCallback(async () => {
     try {
-      const result = await getSimplePrices(symbols)
+      const parsedSymbols = JSON.parse(symbolsString)
+      const result = await getSimplePrices(parsedSymbols)
       setPrices(result)
       setError(null)
     } catch (err) {
@@ -51,7 +60,7 @@ export function useSimplePrices(symbols = ['BTC', 'ETH', 'SOL'], refreshInterval
     } finally {
       setLoading(false)
     }
-  }, [symbols])
+  }, [symbolsString])
 
   useEffect(() => {
     fetchPrices()

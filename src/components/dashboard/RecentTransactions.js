@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import Link from 'next/link'
 import { useTransactions } from '@/hooks/useUserData'
 import { format } from 'date-fns'
@@ -74,7 +74,7 @@ const typeConfig = {
   },
 }
 
-export default function RecentTransactions({ limit = 5 }) {
+function RecentTransactions({ limit = 5 }) {
   // Memoize filters object to prevent infinite loop
   const transactionFilters = useMemo(() => ({ limit: limit * 2 }), [limit])
   const { transactions, loading } = useTransactions(transactionFilters)
@@ -248,3 +248,6 @@ export default function RecentTransactions({ limit = 5 }) {
     </div>
   )
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(RecentTransactions)

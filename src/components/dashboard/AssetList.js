@@ -1,24 +1,14 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import Link from 'next/link'
-import { useMarketData } from '@/hooks/useCryptoPrices'
+import { useMarketDataContext } from '@/lib/marketDataContext'
 import { usePortfolio } from '@/hooks/useUserData'
 import { formatPrice } from '@/lib/crypto'
 
-export default function AssetList({ limit, showViewAll = true }) {
+function AssetList({ limit, showViewAll = true }) {
   const { portfolio, loading: portfolioLoading } = usePortfolio()
-  
-  // Get list of symbols from user's portfolio
-  const portfolioSymbols = useMemo(() => {
-    if (!portfolio.length) return ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
-    return [...new Set(portfolio.map(h => h.symbol))]
-  }, [portfolio])
-  
-  const { data: marketData, loading: marketLoading } = useMarketData(
-    portfolioSymbols,
-    30000
-  )
+  const { marketData, loading: marketLoading } = useMarketDataContext()
   
   const loading = portfolioLoading || marketLoading
   
@@ -243,3 +233,6 @@ export default function AssetList({ limit, showViewAll = true }) {
     </div>
   )
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(AssetList)

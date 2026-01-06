@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { config } from '@/lib/config'
@@ -18,7 +18,7 @@ const pageNames = {
   '/dashboard/settings': 'Settings',
 }
 
-export default function MobileHeader() {
+function MobileHeader() {
   const pathname = usePathname()
   const [showNotifications, setShowNotifications] = useState(false)
   const { notifications, unreadCount } = useNotifications(10)
@@ -142,3 +142,5 @@ export default function MobileHeader() {
   )
 }
 
+// Export memoized version to prevent unnecessary re-renders
+export default memo(MobileHeader)

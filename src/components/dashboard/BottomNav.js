@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
@@ -81,7 +82,7 @@ const navItems = [
   },
 ]
 
-export default function BottomNav() {
+function BottomNav() {
   const pathname = usePathname()
 
   return (
@@ -139,3 +140,5 @@ export default function BottomNav() {
   )
 }
 
+// Export memoized version to prevent unnecessary re-renders
+export default memo(BottomNav)

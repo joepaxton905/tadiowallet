@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 
 const actions = [
@@ -69,7 +70,7 @@ const actions = [
   },
 ]
 
-export default function QuickActions() {
+function QuickActions() {
   return (
     <div className="space-y-4">
       {/* Section Header */}
@@ -175,3 +176,6 @@ export default function QuickActions() {
     </div>
   )
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(QuickActions)

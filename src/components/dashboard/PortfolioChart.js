@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { portfolioHistory } from '@/lib/mockData'
 
@@ -61,7 +61,7 @@ const CustomDot = (props) => {
   return null
 }
 
-export default function PortfolioChart() {
+function PortfolioChart() {
   const [activeTimeframe, setActiveTimeframe] = useState('1Y')
 
   // Calculate chart statistics
@@ -292,3 +292,5 @@ export default function PortfolioChart() {
   )
 }
 
+// Export memoized version to prevent unnecessary re-renders
+export default memo(PortfolioChart)

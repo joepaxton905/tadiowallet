@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { useMarketData } from '@/hooks/useCryptoPrices'
+import { useMemo, memo } from 'react'
+import { useMarketDataContext } from '@/lib/marketDataContext'
 import { usePortfolio } from '@/hooks/useUserData'
 import { formatPrice } from '@/lib/crypto'
 import PortfolioChart from '@/components/dashboard/PortfolioChart'
@@ -11,20 +11,10 @@ import RecentTransactions from '@/components/dashboard/RecentTransactions'
 import MarketOverview from '@/components/dashboard/MarketOverview'
 import { useAuth } from '@/lib/authContext'
 
-export default function DashboardPage() {
+function DashboardPage() {
   const { user } = useAuth()
   const { portfolio, loading: portfolioLoading } = usePortfolio()
-  
-  // Get list of symbols from user's portfolio
-  const portfolioSymbols = useMemo(() => {
-    if (!portfolio.length) return ['BTC', 'ETH', 'SOL', 'ADA', 'MATIC', 'AVAX', 'LINK', 'DOT']
-    return [...new Set(portfolio.map(h => h.symbol))]
-  }, [portfolio])
-  
-  const { data: marketData, loading: marketLoading } = useMarketData(
-    portfolioSymbols,
-    30000
-  )
+  const { marketData, loading: marketLoading } = useMarketDataContext()
   
   const loading = portfolioLoading || marketLoading
   
@@ -360,3 +350,6 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(DashboardPage)

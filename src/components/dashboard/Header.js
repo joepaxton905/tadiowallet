@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useNotifications } from '@/hooks/useUserData'
 
-export default function Header({ onMenuClick }) {
+function Header({ onMenuClick }) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   
@@ -196,3 +196,5 @@ export default function Header({ onMenuClick }) {
   )
 }
 
+// Export memoized version to prevent unnecessary re-renders
+export default memo(Header)

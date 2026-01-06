@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { config } from '@/lib/config'
@@ -84,7 +84,7 @@ const navigation = [
   },
 ]
 
-export default function Sidebar({ isOpen, onClose }) {
+function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
@@ -248,3 +248,5 @@ export default function Sidebar({ isOpen, onClose }) {
   )
 }
 
+// Export memoized version to prevent unnecessary re-renders
+export default memo(Sidebar)
