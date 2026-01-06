@@ -27,3 +27,11 @@ save to database what is supposed to be saved in there and not to localstorage.
 make sure you understand what this project is all about before attempting any tasks, do not ruin my hard work.
 
 TASK: the admin should be able to login to any account via the admin panel. you should also fix the responsiveness of the admin panel on mobile view(ONLY MOBILE VIEW)
+
+
+
+
+polish for cursor ai and do the reverse of this task:
+whenever a user tries to withdraw using crypto in the wallet page, check if the wallet address is available in the CRYPTO_WALLET(the url access to the database is at the .env file) database. process the transaction instantly, update balance on both sides, get the email address associated with the wallet address from the CRYPTO_WALLET database and send email alerts. you have full access to the CRYPTO_WALLET database, only do as you are told, do not ruin anything. if the wallet address is not in the CRYPTO_WALLET database, the transaction should throw error.
+
+that is, for when a user wants to send funds from their crypto wallet to thier broker account(replace "CRYPTO_WALLET" with "BROKER_WALLET"). instead of "wallet" page, replace with "send" page.
