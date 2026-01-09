@@ -1,0 +1,392 @@
+please confirm if you got all the info 
+
+BROWSER RESULTS:
+{"success":true,"database":"test","collections":[{"name":"broker_wallets","documentCount":0,"sampleDocuments":[]},{"name":"admins","documentCount":0,"sampleDocuments":[]},{"name":"withdrawals","documentCount":13,"sampleDocuments":[{"_id":"6918c1429a89a28ebe1c9fa8","allFields":["_id","userId","userEmail","amount","method","status","cryptoDetails","ipAddress","userAgent","fee","netAmount","createdAt","updatedAt","__v","processedAt","processedBy"],"fullDocument":{"_id":"6918c1429a89a28ebe1c9fa8","userId":"69151e6361ef9d9310dbb286","userEmail":"brysencortez14@gmail.com","amount":1000,"method":"crypto","status":"rejected","cryptoDetails":{"currency":"BTC","walletAddress":"Fgjjkkkhhjkkkkkkkkfffhhjjjjk","network":"Bitcoin Mainnet","confirmations":0},"ipAddress":"135.129.124.27","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1","fee":0,"netAmount":1000,"createdAt":"2025-11-15T18:06:58.489Z","updatedAt":"2025-11-26T14:34:12.953Z","__v":0,"processedAt":"2025-11-26T14:34:12.952Z","processedBy":"hardcoded-admin-001"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"69243e986fa54d2427b3ea93","allFields":["_id","userId","userEmail","amount","method","status","cryptoDetails","ipAddress","userAgent","fee","netAmount","createdAt","updatedAt","__v","processedAt","processedBy"],"fullDocument":{"_id":"69243e986fa54d2427b3ea93","userId":"6919bc49ad4aa91f2ff0a91f","userEmail":"ongod8667@gmail.com","amount":10000,"method":"crypto","status":"approved","cryptoDetails":{"currency":"ETH","walletAddress":"0x73E97a0B040c3cB1fd79fE84bC05B1A946510d1f","network":"Ethereum Mainnet","confirmations":0},"ipAddress":"45.134.224.172","userAgent":"Mozilla/5.0 (Linux; Android 15; V2520) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36 VivoBrowser/12.3.5.9","fee":0,"netAmount":10000,"createdAt":"2025-11-24T11:16:40.982Z","updatedAt":"2025-11-24T17:44:01.073Z","__v":0,"processedAt":"2025-11-24T17:44:01.072Z","processedBy":"hardcoded-admin-001"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"69270fa4a082db23f64caa53","allFields":["_id","userId","userEmail","amount","method","status","cryptoDetails","ipAddress","userAgent","fee","netAmount","createdAt","updatedAt","__v","processedAt","processedBy"],"fullDocument":{"_id":"69270fa4a082db23f64caa53","userId":"6925b8ed5850a7d3320722ef","userEmail":"victorenueze812@gmail.com","amount":10000,"method":"crypto","status":"approved","cryptoDetails":{"currency":"ETH","walletAddress":"Hsjksinehgeineiheikejgwugeibegv3uhwojwhv2yhwhh","network":"Ethereum Mainnet","confirmations":0},"ipAddress":"102.90.80.189","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36","fee":0,"netAmount":10000,"createdAt":"2025-11-26T14:33:08.918Z","updatedAt":"2025-11-26T14:34:00.547Z","__v":0,"processedAt":"2025-11-26T14:34:00.547Z","processedBy":"hardcoded-admin-001"},"hasWallets":false,"walletKeys":[],"walletStructure":null}]},{"name":"notifications","documentCount":5,"sampleDocuments":[{"_id":"6929186e24c7977b98adf8f8","allFields":["_id","userId","title","message","type","isRead","readAt","sentBy","sentByName","__v","createdAt","updatedAt"],"fullDocument":{"_id":"6929186e24c7977b98adf8f8","userId":"6925b8ed5850a7d3320722ef","title":"🚨 Important Account Notice","message":"Hello Mathias, Your maintenance is overdue contact support.","type":"error","isRead":false,"readAt":null,"sentBy":null,"sentByName":"Admin","__v":0,"createdAt":"2025-11-28T03:35:10.624Z","updatedAt":"2025-11-28T03:35:10.624Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"692e6813c4f03f982941d6a6","allFields":["_id","userId","title","message","type","isRead","readAt","sentBy","sentByName","__v","createdAt","updatedAt"],"fullDocument":{"_id":"692e6813c4f03f982941d6a6","userId":"691902d1fa394d14ad16915e","title":"🚨 Account Upgrade Notice","message":"Your account is now eligible for an upgrade. Please contact support ","type":"warning","isRead":false,"readAt":null,"sentBy":null,"sentByName":"Admin","__v":0,"createdAt":"2025-12-02T04:16:19.426Z","updatedAt":"2025-12-02T04:16:19.426Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"692f5d8da7f3911926f8f3ec","allFields":["_id","userId","title","message","type","isRead","readAt","sentBy","sentByName","__v","createdAt","updatedAt"],"fullDocument":{"_id":"692f5d8da7f3911926f8f3ec","userId":"691902d1fa394d14ad16915e","title":"🚨 Account Upgrade Notice","message":"Your account is now eligible for an upgrade. Please contact support","type":"warning","isRead":false,"readAt":null,"sentBy":null,"sentByName":"Admin","__v":0,"createdAt":"2025-12-02T21:43:41.653Z","updatedAt":"2025-12-02T21:43:41.653Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null}]},{"name":"transactions","documentCount":3,"sampleDocuments":[{"_id":"695d7cd8dc1af632f8044f89","allFields":["_id","userId","type","asset","assetName","amount","price","value","fee","status","from","fromUser","fromEmail","notes","createdAt","updatedAt"],"fullDocument":{"_id":"695d7cd8dc1af632f8044f89","userId":"69151e6361ef9d9310dbb286","type":"receive","asset":"BTC","assetName":"Bitcoin","amount":0.002,"price":93645,"value":187.29,"fee":0,"status":"completed","from":"1HTNxwP414PQdXRdHz3qctYn7xcPNrmkgu","fromUser":"EEEKKKK sgdeg","fromEmail":"brysencortez14@gmail.coma","notes":"Received from EEEKKKK sgdeg","createdAt":"2026-01-06T21:21:26.709Z","updatedAt":"2026-01-06T21:21:26.709Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"695d7d4cdc1af632f8044fa5","allFields":["_id","userId","type","asset","assetName","amount","price","value","fee","status","from","fromUser","fromEmail","notes","createdAt","updatedAt"],"fullDocument":{"_id":"695d7d4cdc1af632f8044fa5","userId":"6954705535acd374b19cd87d","type":"receive","asset":"BTC","assetName":"Bitcoin","amount":0.0002,"price":93458,"value":18.6916,"fee":0,"status":"completed","from":"1HTNxwP414PQdXRdHz3qctYn7xcPNrmkgu","fromUser":"EEEKKKK sgdeg","fromEmail":"brysencortez14@gmail.coma","notes":"Received from EEEKKKK sgdeg","createdAt":"2026-01-06T21:23:22.516Z","updatedAt":"2026-01-06T21:23:22.516Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"695d81e0ee3093493aa8d238","allFields":["_id","userId","type","asset","assetName","amount","price","value","fee","status","from","fromUser","fromEmail","notes","createdAt","updatedAt"],"fullDocument":{"_id":"695d81e0ee3093493aa8d238","userId":"6954705535acd374b19cd87d","type":"receive","asset":"BTC","assetName":"Bitcoin","amount":0.0001,"price":93476,"value":9.3476,"fee":0,"status":"completed","from":"19RccAYJjNVX76KpLywf6utCw4AFtQmJ5a","fromUser":"Original Valid","fromEmail":"theoriginalvalid@gmail.com","notes":"Received from Original Valid","createdAt":"2026-01-06T21:42:55.142Z","updatedAt":"2026-01-06T21:42:55.142Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null}]},{"name":"deposits","documentCount":6,"sampleDocuments":[{"_id":"69491e7ba5b9122167c2d156","allFields":["_id","userId","userEmail","amount","method","status","cardDetails","cryptoDetails","ipAddress","userAgent","createdAt","updatedAt","__v","failureReason","processingCompletedAt","reviewedAt"],"fullDocument":{"_id":"69491e7ba5b9122167c2d156","userId":"691902d1fa394d14ad16915e","userEmail":"maberger50@icloud.com","amount":200,"method":"card","status":"failed","cardDetails":{"cardNumber":"****9083","cardHolder":"Mathias Berger ","expiryDate":" 08/2"},"cryptoDetails":{"confirmations":0},"ipAddress":"178.197.177.193","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1","createdAt":"2025-12-22T10:33:31.532Z","updatedAt":"2025-12-22T13:09:20.397Z","__v":0,"failureReason":"Rejected by admin","processingCompletedAt":"2025-12-22T13:09:20.395Z","reviewedAt":"2025-12-22T13:09:20.395Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"69491ef2a5b9122167c2d272","allFields":["_id","userId","userEmail","amount","method","status","cardDetails","cryptoDetails","ipAddress","userAgent","createdAt","updatedAt","__v","failureReason","processingCompletedAt","reviewedAt"],"fullDocument":{"_id":"69491ef2a5b9122167c2d272","userId":"691902d1fa394d14ad16915e","userEmail":"maberger50@icloud.com","amount":100,"method":"card","status":"failed","cardDetails":{"cardNumber":"****9083","cardHolder":"Mathias Berger ","expiryDate":"8/28"},"cryptoDetails":{"confirmations":0},"ipAddress":"178.197.177.193","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1","createdAt":"2025-12-22T10:35:30.996Z","updatedAt":"2025-12-22T13:09:28.983Z","__v":0,"failureReason":"Rejected by admin","processingCompletedAt":"2025-12-22T13:09:28.983Z","reviewedAt":"2025-12-22T13:09:28.983Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null},{"_id":"694ad76e784cd6de6c31bf90","allFields":["_id","userId","userEmail","amount","method","status","cryptoDetails","ipAddress","userAgent","createdAt","updatedAt","__v","processingCompletedAt","reviewedAt"],"fullDocument":{"_id":"694ad76e784cd6de6c31bf90","userId":"691902d1fa394d14ad16915e","userEmail":"maberger50@icloud.com","amount":4016,"method":"crypto","status":"completed","cryptoDetails":{"currency":"BTC","transactionHash":"eab9602d683a4526d87e929347faaac51a636652c556147cbd93625e14d2807a","confirmations":0},"ipAddress":"178.197.177.193","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1","createdAt":"2025-12-23T17:54:54.223Z","updatedAt":"2025-12-23T17:56:07.259Z","__v":0,"processingCompletedAt":"2025-12-23T17:56:07.258Z","reviewedAt":"2025-12-23T17:56:07.258Z"},"hasWallets":false,"walletKeys":[],"walletStructure":null}]},{"name":"users","documentCount":10,"sampleDocuments":[{"_id":"69151e6361ef9d9310dbb286","allFields":["_id","name","email","password","phone","country","dateOfBirth","isActive","isVerified","verificationToken","plan","balance","watchlist","deposits","settings","lastLogin","loginAttempts","lockUntil","passwordResetToken","passwordResetExpires","kyc","referredBy","wallets","avatar","portfolio","trades","copyTrading","referrals","createdAt","updatedAt","referralCode","__v","statistics","withdrawals"],"fullDocument":{"_id":"69151e6361ef9d9310dbb286","name":"Brysen Cortez","email":"brysencortez14@gmail.com","password":"brysencortez14@gmail.com","phone":"","country":"","dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-12T23:55:15.714Z"},"balance":{"total":500000.32,"available":172185.763452447,"invested":86071.99455300001},"watchlist":[],"deposits":[],"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":"2026-01-06T21:07:25.908Z","loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1qu2xf0gq3usyxuqz2u93s9pwx723g0cmv5h2yl3","legacyAddress":"1Met8ss9QWHLkLZzoqcAcpG6PNR4HEtRJq","privateKey":"L3rMZN19eC7KKkDrGy3kpHoL3gE3JQGzC5yb483N2nM3AALUJ2Ar","publicKey":"2,12,77,188,50,138,125,114,221,39,158,252,35,215,104,238,189,1,98,193,50,128,65,208,63,166,75,53,66,49,237,232,95","seedPhrase":"trumpet solar man enough cinnamon subway muscle kind letter into army shrimp","derivationPath":"m/44'/0'/0'/0/0","balance":0.0021,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0x3565f38722251bA262d87a89E483DA7E45E00e88","privateKey":"0x04cac030e46d1070d3ffdde11e888afd95f352b17bcca235f9308272aae23124","publicKey":"0x03c07b6bc13cb39b4d5e87101973e747f572e7f6f8533391d8d30c0b0a2c95190a","seedPhrase":"cereal olive float best buyer ticket twelve depart equal judge bulk beauty","derivationPath":"m/44'/60'/0'/0/0","balance":0.7,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x455544888Dd7f098E7B2650505CeD54Ae964c2dD","privateKey":"0xb5af9835cd6f606904e60c88fb4cd9e9a1fa7e925722831c4323521096146023","publicKey":"0x03dca1cf2f991b5196582b15107895f466335a333bd6aa65b1463fdc2f75e354ee","seedPhrase":"shed echo infant sunset submit slim jazz connect drop diamond genius alert","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-12T23:55:15.707Z","lastUpdated":"2025-11-12T23:55:15.707Z"},"avatar":"BC","portfolio":[{"asset":"TETHER","symbol":"tether","quantity":21,"avgPrice":0.999740619047619,"currentValue":0,"_id":"6917021e1036f71cfc7589d2"},{"asset":"BTC","symbol":"bitcoin","quantity":1,"avgPrice":86051,"currentValue":0,"_id":"69244236e01cbfdd23220209"}],"trades":[{"type":"buy","asset":"tether","quantity":20,"price":0.999747,"total":19.99494,"fee":0.01999494,"timestamp":"2025-11-14T10:19:10.748Z","status":"closed","orderType":"market","leverage":1,"_id":"6917021e1036f71cfc7589d1"},{"type":"buy","asset":"BTC","symbol":"bitcoin","quantity":1,"price":86051,"total":86051,"fee":86.051,"timestamp":"2025-11-24T11:32:06.474Z","status":"open","orderType":"market","leverage":14,"openPrice":86051,"currentPrice":86051,"stopLoss":0.01,"takeProfit":0.28,"_id":"69244236e01cbfdd2322020a"},{"type":"buy","asset":"USDT","symbol":"tether","quantity":1,"price":0.999613,"total":0.999613,"fee":0.0009996129999999999,"timestamp":"2025-11-24T11:58:47.617Z","status":"open","orderType":"market","leverage":25,"openPrice":0.999613,"currentPrice":0.999613,"stopLoss":-0.09,"takeProfit":3.06,"_id":"69244877a476effdf77f4f36"}],"copyTrading":[],"referrals":[],"createdAt":"2025-11-12T23:55:15.724Z","updatedAt":"2026-01-06T21:07:25.912Z","referralCode":"69151E63","__v":4,"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"withdrawals":["6918c1429a89a28ebe1c9fa8"]},"hasWallets":true,"walletKeys":["btc","eth","usdt_trc20","createdAt","lastUpdated"],"walletStructure":{"btc":{"fields":["address","legacyAddress","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"bc1qu2xf0gq3usyxuqz2u93s9pwx723g0cmv5h2yl3","legacyAddress":"1Met8ss9QWHLkLZzoqcAcpG6PNR4HEtRJq","privateKey":"L3rMZN19eC7KKkDrGy3kpHoL3gE3JQGzC5yb483N2nM3AALUJ2Ar","publicKey":"2,12,77,188,50,138,125,114,221,39,158,252,35,215,104,238,189,1,98,193,50,128,65,208,63,166,75,53,66,49,237,232,95","seedPhrase":"trumpet solar man enough cinnamon subway muscle kind letter into army shrimp","derivationPath":"m/44'/0'/0'/0/0","balance":0.0021,"currency":"BTC","network":"Bitcoin Mainnet"}},"eth":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0x3565f38722251bA262d87a89E483DA7E45E00e88","privateKey":"0x04cac030e46d1070d3ffdde11e888afd95f352b17bcca235f9308272aae23124","publicKey":"0x03c07b6bc13cb39b4d5e87101973e747f572e7f6f8533391d8d30c0b0a2c95190a","seedPhrase":"cereal olive float best buyer ticket twelve depart equal judge bulk beauty","derivationPath":"m/44'/60'/0'/0/0","balance":0.7,"currency":"ETH","network":"Ethereum Mainnet"}},"usdt_trc20":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0x455544888Dd7f098E7B2650505CeD54Ae964c2dD","privateKey":"0xb5af9835cd6f606904e60c88fb4cd9e9a1fa7e925722831c4323521096146023","publicKey":"0x03dca1cf2f991b5196582b15107895f466335a333bd6aa65b1463fdc2f75e354ee","seedPhrase":"shed echo infant sunset submit slim jazz connect drop diamond genius alert","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"}},"createdAt":{"fields":[],"sample":"2025-11-12T23:55:15.707Z"},"lastUpdated":{"fields":[],"sample":"2025-11-12T23:55:15.707Z"}}},{"_id":"69178ac07e51d43ab656e8a9","allFields":["_id","name","email","password","phone","country","dateOfBirth","isActive","isVerified","verificationToken","plan","balance","watchlist","deposits","statistics","settings","lastLogin","loginAttempts","lockUntil","passwordResetToken","passwordResetExpires","kyc","referredBy","wallets","avatar","portfolio","trades","copyTrading","referrals","createdAt","updatedAt","referralCode","__v"],"fullDocument":{"_id":"69178ac07e51d43ab656e8a9","name":"Adam Torres","email":"tss3.news3@gmail.com","password":"6*sqGp#qZJ?Rsn.?","phone":null,"country":null,"dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-14T20:02:08.170Z"},"balance":{"total":0,"available":0,"invested":0},"watchlist":[],"deposits":[],"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":null,"loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1q2zm5gafx93dlwjjlqkqschjtay2g6jn4jgj557","legacyAddress":"18MnbzPf4rpzaEHYmmiR7aHPhfYFzMVvRC","privateKey":"L4x9VsMXu6rKjgzxr2poDTZDBuy4eLtPsiVVyw5SJBi6DvD2HNjP","publicKey":"3,154,71,215,96,61,246,61,147,224,33,82,225,130,169,192,94,172,231,129,112,166,141,65,188,199,49,238,245,64,147,19,200","seedPhrase":"explain protect faith story mandate burden state sausage stand route civil addict","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0xC9AD6D56f3cD8436BEBE2150D8d380048c112a49","privateKey":"0x0f65f2122883c86f9d42f973b29fe38c7df8c394630ea79cf92eecf0ba582a6f","publicKey":"0x030194d23ae215e661a2caf15661fb4e2b26ea74351e68f4b34c227bcb9a2cb01d","seedPhrase":"away couch diary squirrel dune omit wall embrace check arrive wrap cousin","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x81Cb8cf22239215fbA8d617d3B72187964c67CD9","privateKey":"0x80d348f45c04bef756285cc15dbffb14f72af46487eab9d37eb495d5d9033da3","publicKey":"0x03f6b4c3bdad7e95dc6ca97d66f9ca21f45714fae8240009698fac6a44bfde330b","seedPhrase":"recycle holiday shock prefer crop catch cereal emotion attend carry clump soda","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-14T20:02:08.150Z","lastUpdated":"2025-11-14T20:02:08.150Z"},"avatar":"AT","portfolio":[],"trades":[],"copyTrading":[],"referrals":[],"createdAt":"2025-11-14T20:02:08.176Z","updatedAt":"2025-11-14T20:02:08.176Z","referralCode":"69178AC0","__v":0},"hasWallets":true,"walletKeys":["btc","eth","usdt_trc20","createdAt","lastUpdated"],"walletStructure":{"btc":{"fields":["address","legacyAddress","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"bc1q2zm5gafx93dlwjjlqkqschjtay2g6jn4jgj557","legacyAddress":"18MnbzPf4rpzaEHYmmiR7aHPhfYFzMVvRC","privateKey":"L4x9VsMXu6rKjgzxr2poDTZDBuy4eLtPsiVVyw5SJBi6DvD2HNjP","publicKey":"3,154,71,215,96,61,246,61,147,224,33,82,225,130,169,192,94,172,231,129,112,166,141,65,188,199,49,238,245,64,147,19,200","seedPhrase":"explain protect faith story mandate burden state sausage stand route civil addict","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"}},"eth":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0xC9AD6D56f3cD8436BEBE2150D8d380048c112a49","privateKey":"0x0f65f2122883c86f9d42f973b29fe38c7df8c394630ea79cf92eecf0ba582a6f","publicKey":"0x030194d23ae215e661a2caf15661fb4e2b26ea74351e68f4b34c227bcb9a2cb01d","seedPhrase":"away couch diary squirrel dune omit wall embrace check arrive wrap cousin","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"}},"usdt_trc20":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0x81Cb8cf22239215fbA8d617d3B72187964c67CD9","privateKey":"0x80d348f45c04bef756285cc15dbffb14f72af46487eab9d37eb495d5d9033da3","publicKey":"0x03f6b4c3bdad7e95dc6ca97d66f9ca21f45714fae8240009698fac6a44bfde330b","seedPhrase":"recycle holiday shock prefer crop catch cereal emotion attend carry clump soda","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"}},"createdAt":{"fields":[],"sample":"2025-11-14T20:02:08.150Z"},"lastUpdated":{"fields":[],"sample":"2025-11-14T20:02:08.150Z"}}},{"_id":"691797aa26a765cf1da1c4f0","allFields":["_id","name","email","password","phone","country","dateOfBirth","isActive","isVerified","verificationToken","plan","balance","watchlist","deposits","statistics","settings","lastLogin","loginAttempts","lockUntil","passwordResetToken","passwordResetExpires","kyc","referredBy","wallets","avatar","portfolio","trades","copyTrading","referrals","createdAt","updatedAt","referralCode","__v"],"fullDocument":{"_id":"691797aa26a765cf1da1c4f0","name":"Corey King","email":"tss2.news2@gmail.com","password":"3}ZvC1boO.>g*XcF","phone":null,"country":null,"dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-14T20:57:14.271Z"},"balance":{"total":0,"available":0,"invested":0},"watchlist":[],"deposits":[],"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":null,"loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1qnt8894rdz5l9unet00k3eckw92gy99qss32f5c","legacyAddress":"1F7YNqezUYoPLwJMaq79rS6QsEvkKRD5yT","privateKey":"L3gLKPvhzdyNTaWdju2kyv2rHsm8PeHGaXJf7B9ZLoReQW7ZuEUz","publicKey":"3,157,99,161,6,211,205,199,206,231,192,68,146,151,138,101,129,45,187,192,166,66,159,37,237,115,241,235,229,179,208,193,61","seedPhrase":"heavy acoustic fiscal exercise wedding type cycle cradle maid garbage skin legal","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0x829606e005748793d8A3F9B9F2BD930885cBb46e","privateKey":"0xb37bcba2e88611e9f30f603646038f45fedfecf7bebbca391d775ef30534cdef","publicKey":"0x03b5aa35fc50c74cbee71c5c20aefda9586abeafd0355047c365244487b6fc088b","seedPhrase":"palace face tent salad sunny delay century crush ritual clutch kind off","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x93827a1faB01e5D5A184a9e8AAA2f646b7c83379","privateKey":"0x661d3cf5b806ed3fa28fd206562b8360777fa719decf6a70679fcc26c8db5fca","publicKey":"0x039a4aee4ba0b102ac5a13976ad724f5d552e62e67729f48349ca7f99f364a6fdc","seedPhrase":"foil deliver modify undo then leader afford series nerve payment patient shoe","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-14T20:57:14.259Z","lastUpdated":"2025-11-14T20:57:14.259Z"},"avatar":"CK","portfolio":[],"trades":[],"copyTrading":[],"referrals":[],"createdAt":"2025-11-14T20:57:14.274Z","updatedAt":"2025-11-14T20:57:14.274Z","referralCode":"691797AA","__v":0},"hasWallets":true,"walletKeys":["btc","eth","usdt_trc20","createdAt","lastUpdated"],"walletStructure":{"btc":{"fields":["address","legacyAddress","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"bc1qnt8894rdz5l9unet00k3eckw92gy99qss32f5c","legacyAddress":"1F7YNqezUYoPLwJMaq79rS6QsEvkKRD5yT","privateKey":"L3gLKPvhzdyNTaWdju2kyv2rHsm8PeHGaXJf7B9ZLoReQW7ZuEUz","publicKey":"3,157,99,161,6,211,205,199,206,231,192,68,146,151,138,101,129,45,187,192,166,66,159,37,237,115,241,235,229,179,208,193,61","seedPhrase":"heavy acoustic fiscal exercise wedding type cycle cradle maid garbage skin legal","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"}},"eth":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0x829606e005748793d8A3F9B9F2BD930885cBb46e","privateKey":"0xb37bcba2e88611e9f30f603646038f45fedfecf7bebbca391d775ef30534cdef","publicKey":"0x03b5aa35fc50c74cbee71c5c20aefda9586abeafd0355047c365244487b6fc088b","seedPhrase":"palace face tent salad sunny delay century crush ritual clutch kind off","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"}},"usdt_trc20":{"fields":["address","privateKey","publicKey","seedPhrase","derivationPath","balance","currency","network"],"sample":{"address":"0x93827a1faB01e5D5A184a9e8AAA2f646b7c83379","privateKey":"0x661d3cf5b806ed3fa28fd206562b8360777fa719decf6a70679fcc26c8db5fca","publicKey":"0x039a4aee4ba0b102ac5a13976ad724f5d552e62e67729f48349ca7f99f364a6fdc","seedPhrase":"foil deliver modify undo then leader afford series nerve payment patient shoe","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"}},"createdAt":{"fields":[],"sample":"2025-11-14T20:57:14.259Z"},"lastUpdated":{"fields":[],"sample":"2025-11-14T20:57:14.259Z"}}}]}],"sampleUserDocuments":[{"collection":"users","documents":[{"_id":"69151e6361ef9d9310dbb286","name":"Brysen Cortez","email":"brysencortez14@gmail.com","password":"brysencortez14@gmail.com","phone":"","country":"","dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-12T23:55:15.714Z"},"balance":{"total":500000.32,"available":172185.763452447,"invested":86071.99455300001},"watchlist":[],"deposits":[],"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":"2026-01-06T21:07:25.908Z","loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1qu2xf0gq3usyxuqz2u93s9pwx723g0cmv5h2yl3","legacyAddress":"1Met8ss9QWHLkLZzoqcAcpG6PNR4HEtRJq","privateKey":"L3rMZN19eC7KKkDrGy3kpHoL3gE3JQGzC5yb483N2nM3AALUJ2Ar","publicKey":"2,12,77,188,50,138,125,114,221,39,158,252,35,215,104,238,189,1,98,193,50,128,65,208,63,166,75,53,66,49,237,232,95","seedPhrase":"trumpet solar man enough cinnamon subway muscle kind letter into army shrimp","derivationPath":"m/44'/0'/0'/0/0","balance":0.0021,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0x3565f38722251bA262d87a89E483DA7E45E00e88","privateKey":"0x04cac030e46d1070d3ffdde11e888afd95f352b17bcca235f9308272aae23124","publicKey":"0x03c07b6bc13cb39b4d5e87101973e747f572e7f6f8533391d8d30c0b0a2c95190a","seedPhrase":"cereal olive float best buyer ticket twelve depart equal judge bulk beauty","derivationPath":"m/44'/60'/0'/0/0","balance":0.7,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x455544888Dd7f098E7B2650505CeD54Ae964c2dD","privateKey":"0xb5af9835cd6f606904e60c88fb4cd9e9a1fa7e925722831c4323521096146023","publicKey":"0x03dca1cf2f991b5196582b15107895f466335a333bd6aa65b1463fdc2f75e354ee","seedPhrase":"shed echo infant sunset submit slim jazz connect drop diamond genius alert","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-12T23:55:15.707Z","lastUpdated":"2025-11-12T23:55:15.707Z"},"avatar":"BC","portfolio":[{"asset":"TETHER","symbol":"tether","quantity":21,"avgPrice":0.999740619047619,"currentValue":0,"_id":"6917021e1036f71cfc7589d2"},{"asset":"BTC","symbol":"bitcoin","quantity":1,"avgPrice":86051,"currentValue":0,"_id":"69244236e01cbfdd23220209"}],"trades":[{"type":"buy","asset":"tether","quantity":20,"price":0.999747,"total":19.99494,"fee":0.01999494,"timestamp":"2025-11-14T10:19:10.748Z","status":"closed","orderType":"market","leverage":1,"_id":"6917021e1036f71cfc7589d1"},{"type":"buy","asset":"BTC","symbol":"bitcoin","quantity":1,"price":86051,"total":86051,"fee":86.051,"timestamp":"2025-11-24T11:32:06.474Z","status":"open","orderType":"market","leverage":14,"openPrice":86051,"currentPrice":86051,"stopLoss":0.01,"takeProfit":0.28,"_id":"69244236e01cbfdd2322020a"},{"type":"buy","asset":"USDT","symbol":"tether","quantity":1,"price":0.999613,"total":0.999613,"fee":0.0009996129999999999,"timestamp":"2025-11-24T11:58:47.617Z","status":"open","orderType":"market","leverage":25,"openPrice":0.999613,"currentPrice":0.999613,"stopLoss":-0.09,"takeProfit":3.06,"_id":"69244877a476effdf77f4f36"}],"copyTrading":[],"referrals":[],"createdAt":"2025-11-12T23:55:15.724Z","updatedAt":"2026-01-06T21:07:25.912Z","referralCode":"69151E63","__v":4,"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"withdrawals":["6918c1429a89a28ebe1c9fa8"]},{"_id":"69178ac07e51d43ab656e8a9","name":"Adam Torres","email":"tss3.news3@gmail.com","password":"6*sqGp#qZJ?Rsn.?","phone":null,"country":null,"dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-14T20:02:08.170Z"},"balance":{"total":0,"available":0,"invested":0},"watchlist":[],"deposits":[],"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":null,"loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1q2zm5gafx93dlwjjlqkqschjtay2g6jn4jgj557","legacyAddress":"18MnbzPf4rpzaEHYmmiR7aHPhfYFzMVvRC","privateKey":"L4x9VsMXu6rKjgzxr2poDTZDBuy4eLtPsiVVyw5SJBi6DvD2HNjP","publicKey":"3,154,71,215,96,61,246,61,147,224,33,82,225,130,169,192,94,172,231,129,112,166,141,65,188,199,49,238,245,64,147,19,200","seedPhrase":"explain protect faith story mandate burden state sausage stand route civil addict","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0xC9AD6D56f3cD8436BEBE2150D8d380048c112a49","privateKey":"0x0f65f2122883c86f9d42f973b29fe38c7df8c394630ea79cf92eecf0ba582a6f","publicKey":"0x030194d23ae215e661a2caf15661fb4e2b26ea74351e68f4b34c227bcb9a2cb01d","seedPhrase":"away couch diary squirrel dune omit wall embrace check arrive wrap cousin","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x81Cb8cf22239215fbA8d617d3B72187964c67CD9","privateKey":"0x80d348f45c04bef756285cc15dbffb14f72af46487eab9d37eb495d5d9033da3","publicKey":"0x03f6b4c3bdad7e95dc6ca97d66f9ca21f45714fae8240009698fac6a44bfde330b","seedPhrase":"recycle holiday shock prefer crop catch cereal emotion attend carry clump soda","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-14T20:02:08.150Z","lastUpdated":"2025-11-14T20:02:08.150Z"},"avatar":"AT","portfolio":[],"trades":[],"copyTrading":[],"referrals":[],"createdAt":"2025-11-14T20:02:08.176Z","updatedAt":"2025-11-14T20:02:08.176Z","referralCode":"69178AC0","__v":0},{"_id":"691797aa26a765cf1da1c4f0","name":"Corey King","email":"tss2.news2@gmail.com","password":"3}ZvC1boO.>g*XcF","phone":null,"country":null,"dateOfBirth":null,"isActive":true,"isVerified":false,"verificationToken":null,"plan":{"tier":"Basic","amount":0,"performance":0,"startDate":"2025-11-14T20:57:14.271Z"},"balance":{"total":0,"available":0,"invested":0},"watchlist":[],"deposits":[],"statistics":{"totalPnL":null,"assetsCount":null,"totalTrades":null,"winRate":null},"settings":{"notifications":{"trades":true,"priceAlerts":true,"copyTrading":true,"email":true,"sms":false},"theme":"dark","language":"en","defaultOrderType":"market","confirmations":true,"twoFactor":false},"lastLogin":null,"loginAttempts":0,"lockUntil":null,"passwordResetToken":null,"passwordResetExpires":null,"kyc":{"status":"pending","documentType":null,"documentNumber":null,"documentImage":null,"submittedAt":null,"reviewedAt":null},"referredBy":null,"wallets":{"btc":{"address":"bc1qnt8894rdz5l9unet00k3eckw92gy99qss32f5c","legacyAddress":"1F7YNqezUYoPLwJMaq79rS6QsEvkKRD5yT","privateKey":"L3gLKPvhzdyNTaWdju2kyv2rHsm8PeHGaXJf7B9ZLoReQW7ZuEUz","publicKey":"3,157,99,161,6,211,205,199,206,231,192,68,146,151,138,101,129,45,187,192,166,66,159,37,237,115,241,235,229,179,208,193,61","seedPhrase":"heavy acoustic fiscal exercise wedding type cycle cradle maid garbage skin legal","derivationPath":"m/44'/0'/0'/0/0","balance":0,"currency":"BTC","network":"Bitcoin Mainnet"},"eth":{"address":"0x829606e005748793d8A3F9B9F2BD930885cBb46e","privateKey":"0xb37bcba2e88611e9f30f603646038f45fedfecf7bebbca391d775ef30534cdef","publicKey":"0x03b5aa35fc50c74cbee71c5c20aefda9586abeafd0355047c365244487b6fc088b","seedPhrase":"palace face tent salad sunny delay century crush ritual clutch kind off","derivationPath":"m/44'/60'/0'/0/0","balance":0,"currency":"ETH","network":"Ethereum Mainnet"},"usdt_trc20":{"address":"0x93827a1faB01e5D5A184a9e8AAA2f646b7c83379","privateKey":"0x661d3cf5b806ed3fa28fd206562b8360777fa719decf6a70679fcc26c8db5fca","publicKey":"0x039a4aee4ba0b102ac5a13976ad724f5d552e62e67729f48349ca7f99f364a6fdc","seedPhrase":"foil deliver modify undo then leader afford series nerve payment patient shoe","derivationPath":"m/44'/195'/0'/0/0","balance":0,"currency":"USDT","network":"Tron (TRC20)"},"createdAt":"2025-11-14T20:57:14.259Z","lastUpdated":"2025-11-14T20:57:14.259Z"},"avatar":"CK","portfolio":[],"trades":[],"copyTrading":[],"referrals":[],"createdAt":"2025-11-14T20:57:14.274Z","updatedAt":"2025-11-14T20:57:14.274Z","referralCode":"691797AA","__v":0}]}]}
+
+BROWSER RESULTS ENDS:
+
+CONSOLE RESULTS:
+
+🔌 Connecting to broker database...
+✅ Connected!
+📊 Database name: test
+📋 Collections: [
+  'broker_wallets',
+  'admins',
+  'withdrawals',
+  'notifications',
+  'transactions',
+  'deposits',
+  'users'
+]
+
+📦 Reading collection: broker_wallets
+   Documents: 0
+   Sample count: 0
+
+📦 Reading collection: admins
+   Documents: 0
+   Sample count: 0
+
+📦 Reading collection: withdrawals
+   Documents: 13
+   Sample count: 3
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: withdrawals
+   Fields: [
+  '_id',           'userId',
+  'userEmail',     'amount',
+  'method',        'status',
+  'cryptoDetails', 'ipAddress',
+  'userAgent',     'fee',
+  'netAmount',     'createdAt',
+  'updatedAt',     '__v',
+  'processedAt',   'processedBy'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: withdrawals
+   Fields: [
+  '_id',           'userId',
+  'userEmail',     'amount',
+  'method',        'status',
+  'cryptoDetails', 'ipAddress',
+  'userAgent',     'fee',
+  'netAmount',     'createdAt',
+  'updatedAt',     '__v',
+  'processedAt',   'processedBy'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: withdrawals
+   Fields: [
+  '_id',           'userId',
+  'userEmail',     'amount',
+  'method',        'status',
+  'cryptoDetails', 'ipAddress',
+  'userAgent',     'fee',
+  'netAmount',     'createdAt',
+  'updatedAt',     '__v',
+  'processedAt',   'processedBy'
+]
+
+📦 Reading collection: notifications
+   Documents: 5
+   Sample count: 3
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: notifications
+   Fields: [
+  '_id',        'userId',
+  'title',      'message',
+  'type',       'isRead',
+  'readAt',     'sentBy',
+  'sentByName', '__v',
+  'createdAt',  'updatedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: notifications
+   Fields: [
+  '_id',        'userId',
+  'title',      'message',
+  'type',       'isRead',
+  'readAt',     'sentBy',
+  'sentByName', '__v',
+  'createdAt',  'updatedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: notifications
+   Fields: [
+  '_id',        'userId',
+  'title',      'message',
+  'type',       'isRead',
+  'readAt',     'sentBy',
+  'sentByName', '__v',
+  'createdAt',  'updatedAt'
+]
+
+📦 Reading collection: transactions
+   Documents: 3
+   Sample count: 3
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: transactions
+   Fields: [
+  '_id',       'userId',
+  'type',      'asset',
+  'assetName', 'amount',
+  'price',     'value',
+  'fee',       'status',
+  'from',      'fromUser',
+  'fromEmail', 'notes',
+  'createdAt', 'updatedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: transactions
+   Fields: [
+  '_id',       'userId',
+  'type',      'asset',
+  'assetName', 'amount',
+  'price',     'value',
+  'fee',       'status',
+  'from',      'fromUser',
+  'fromEmail', 'notes',
+  'createdAt', 'updatedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: transactions
+   Fields: [
+  '_id',       'userId',
+  'type',      'asset',
+  'assetName', 'amount',
+  'price',     'value',
+  'fee',       'status',
+  'from',      'fromUser',
+  'fromEmail', 'notes',
+  'createdAt', 'updatedAt'
+]
+
+📦 Reading collection: deposits
+   Documents: 6
+   Sample count: 3
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: deposits
+   Fields: [
+  '_id',
+  'userId',
+  'userEmail',
+  'amount',
+  'method',
+  'status',
+  'cardDetails',
+  'cryptoDetails',
+  'ipAddress',
+  'userAgent',
+  'createdAt',
+  'updatedAt',
+  '__v',
+  'failureReason',
+  'processingCompletedAt',
+  'reviewedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: deposits
+   Fields: [
+  '_id',
+  'userId',
+  'userEmail',
+  'amount',
+  'method',
+  'status',
+  'cardDetails',
+  'cryptoDetails',
+  'ipAddress',
+  'userAgent',
+  'createdAt',
+  'updatedAt',
+  '__v',
+  'failureReason',
+  'processingCompletedAt',
+  'reviewedAt'
+]
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: deposits
+   Fields: [
+  '_id',
+  'userId',
+  'userEmail',
+  'amount',
+  'method',
+  'status',
+  'cryptoDetails',
+  'ipAddress',
+  'userAgent',
+  'createdAt',
+  'updatedAt',
+  '__v',
+  'processingCompletedAt',
+  'reviewedAt'
+]
+
+📦 Reading collection: users
+   Documents: 10
+   Sample count: 3
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: users
+   Fields: [
+  '_id',                'name',
+  'email',              'password',
+  'phone',              'country',
+  'dateOfBirth',        'isActive',
+  'isVerified',         'verificationToken',
+  'plan',               'balance',
+  'watchlist',          'deposits',
+  'settings',           'lastLogin',
+  'loginAttempts',      'lockUntil',
+  'passwordResetToken', 'passwordResetExpires',
+  'kyc',                'referredBy',
+  'wallets',            'avatar',
+  'portfolio',          'trades',
+  'copyTrading',        'referrals',
+  'createdAt',          'updatedAt',
+  'referralCode',       '__v',
+  'statistics',         'withdrawals'
+]
+   Wallets found: [ 'btc', 'eth', 'usdt_trc20', 'createdAt', 'lastUpdated' ]
+   wallets.btc: [
+  'address',
+  'legacyAddress',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.eth: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.usdt_trc20: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.createdAt: []
+   wallets.lastUpdated: []
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: users
+   Fields: [
+  '_id',                  'name',
+  'email',                'password',
+  'phone',                'country',
+  'dateOfBirth',          'isActive',
+  'isVerified',           'verificationToken',
+  'plan',                 'balance',
+  'watchlist',            'deposits',
+  'statistics',           'settings',
+  'lastLogin',            'loginAttempts',
+  'lockUntil',            'passwordResetToken',
+  'passwordResetExpires', 'kyc',
+  'referredBy',           'wallets',
+  'avatar',               'portfolio',
+  'trades',               'copyTrading',
+  'referrals',            'createdAt',
+  'updatedAt',            'referralCode',
+  '__v'
+]
+   Wallets found: [ 'btc', 'eth', 'usdt_trc20', 'createdAt', 'lastUpdated' ]
+   wallets.btc: [
+  'address',
+  'legacyAddress',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.eth: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.usdt_trc20: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.createdAt: []
+   wallets.lastUpdated: []
+
+   ========== DOCUMENT STRUCTURE ==========
+   Collection: users
+   Fields: [
+  '_id',                  'name',
+  'email',                'password',
+  'phone',                'country',
+  'dateOfBirth',          'isActive',
+  'isVerified',           'verificationToken',
+  'plan',                 'balance',
+  'watchlist',            'deposits',
+  'statistics',           'settings',
+  'lastLogin',            'loginAttempts',
+  'lockUntil',            'passwordResetToken',
+  'passwordResetExpires', 'kyc',
+  'referredBy',           'wallets',
+  'avatar',               'portfolio',
+  'trades',               'copyTrading',
+  'referrals',            'createdAt',
+  'updatedAt',            'referralCode',
+  '__v'
+]
+   Wallets found: [ 'btc', 'eth', 'usdt_trc20', 'createdAt', 'lastUpdated' ]
+   wallets.btc: [
+  'address',
+  'legacyAddress',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.eth: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.usdt_trc20: [
+  'address',
+  'privateKey',
+  'publicKey',
+  'seedPhrase',
+  'derivationPath',
+  'balance',
+  'currency',
+  'network'
+]
+   wallets.createdAt: []
+   wallets.lastUpdated: []
+
+✅ Database structure read complete!
+🔌 Connection closed

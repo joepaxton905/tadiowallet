@@ -1,146 +1,149 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
-import Transaction from '@/models/Transaction'
-import Portfolio from '@/models/Portfolio'
-import Wallet from '@/models/Wallet'
 import User from '@/models/User'
-import Notification from '@/models/Notification'
+import Transaction from '@/models/Transaction'
 import { verifyToken } from '@/lib/auth'
-import { queueStatsUpdate } from '@/lib/updateUserStats'
-import { getSimplePrices } from '@/lib/crypto'
 import mongoose from 'mongoose'
-
-const { sendTransferSentEmail, sendTransferReceivedEmail } = require('@/lib/email')
-
-// Broker wallet database connection cache
-let brokerConnection = null
-
-/**
- * Connect to BROKER_WALLET database and search for address in nested structure
- * Searches for: user.wallets.btc.address, user.wallets.eth.address, etc.
- */
-async function findBrokerWallet(address, symbol) {
-  try {
-    if (!process.env.BROKER_WALLET_URI) {
-      console.log('⚠️  BROKER_WALLET_URI not configured')
-      return null
-    }
-
-    // Create connection if not exists
-    if (!brokerConnection) {
-      brokerConnection = await mongoose.createConnection(process.env.BROKER_WALLET_URI).asPromise()
-      console.log('✅ Connected to BROKER_WALLET database')
-    }
-
-    // Get all collections in the broker database
-    const collections = await brokerConnection.db.listCollections().toArray()
-    console.log('📋 Broker DB collections:', collections.map(c => c.name))
-
-    const symbolLower = symbol.toLowerCase()
-    
-    // Search through ALL collections for nested wallet address
-    for (const collectionInfo of collections) {
-      const collectionName = collectionInfo.name
-      const collection = brokerConnection.db.collection(collectionName)
-
-      // Build query to search nested wallet structure: user.wallets.btc.address
-      const query = {
-        $or: [
-          { [`wallets.${symbolLower}.address`]: address },
-          { [`wallets.${symbol}.address`]: address },
-          { [`wallets.${symbol.toUpperCase()}.address`]: address }
-        ]
-      }
-
-      console.log(`🔍 Searching in ${collectionName} for nested wallet:`, query)
-      
-      const doc = await collection.findOne(query)
-
-      if (doc) {
-        console.log(`✅ Found broker user in collection: ${collectionName}`)
-        console.log('📄 User document keys:', Object.keys(doc))
-        
-        // Extract the wallet data from nested structure
-        const walletData = doc.wallets?.[symbolLower] || 
-                          doc.wallets?.[symbol] || 
-                          doc.wallets?.[symbol.toUpperCase()]
-        
-        if (walletData) {
-          console.log('✅ Wallet data found:', walletData)
-          
-          // Return combined document with wallet and user info
-          return {
-            ...doc,
-            walletAddress: walletData.address || address,
-            walletData: walletData,
-            symbol: symbol,
-            email: doc.email || doc.Email || doc.emailAddress,
-            name: doc.name || doc.fullName || doc.username || doc.accountName,
-            userId: doc._id
-          }
-        }
-      }
-    }
-
-    console.log('ℹ️  No broker wallet found for address:', address)
-    return null
-
-  } catch (error) {
-    console.error('❌ Error searching broker wallet:', error.message)
-    console.error('Stack:', error.stack)
-    return null
-  }
-}
+import { sendTransferSentEmail, sendTransferReceivedEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
-// Supported assets for internal transfers
-const SUPPORTED_ASSETS = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'XRP']
-
-// Minimum transfer amounts (to prevent dust attacks and spam)
-const MIN_TRANSFER_AMOUNTS = {
-  'BTC': 0.0001,    // ~$4 at $40k
-  'ETH': 0.001,     // ~$2 at $2k
-  'USDT': 1,        // $1
-  'BNB': 0.01,      // ~$3 at $300
-  'SOL': 0.01,      // ~$1 at $100
-  'XRP': 1,         // ~$0.60 at $0.60
-}
-
-/**
- * POST /api/transactions/transfer
- * Transfer cryptocurrency from one user to another
- * 
- * Body:
- * - recipientAddress: Wallet address of recipient
- * - asset: Symbol of the cryptocurrency (e.g., 'BTC', 'ETH')
- * - amount: Amount to transfer
- * - notes: Optional notes for the transaction
- */
-export async function POST(request) {
-  const session = await mongoose.startSession()
+// ============================================================================
+// GET - Validate Recipient Address (including Broker Wallets)
+// ============================================================================
+export async function GET(request) {
+  let brokerConnection = null
   
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { searchParams } = new URL(request.url)
+    const address = searchParams.get('address')
 
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-    
-    if (!decoded) {
+    if (!address) {
       return NextResponse.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
+        { success: false, error: 'Address is required' },
+        { status: 400 }
       )
     }
 
     await connectDB()
+
+    // 1️⃣ Check in MAIN database first
+    const mainUser = await User.findOne({
+      $or: [
+        { 'wallets.btc.address': address },
+        { 'wallets.btc.legacyAddress': address },
+        { 'wallets.eth.address': address },
+        { 'wallets.usdt_trc20.address': address }
+      ]
+    })
+
+    if (mainUser) {
+      // Found in main database
+      let walletInfo = {}
+      
+      if (mainUser.wallets.btc?.address === address || mainUser.wallets.btc?.legacyAddress === address) {
+        walletInfo = { symbol: 'BTC', currency: 'Bitcoin', network: 'Bitcoin Mainnet' }
+      } else if (mainUser.wallets.eth?.address === address) {
+        walletInfo = { symbol: 'ETH', currency: 'Ethereum', network: 'Ethereum Mainnet' }
+      } else if (mainUser.wallets.usdt_trc20?.address === address) {
+        walletInfo = { symbol: 'USDT', currency: 'Tether', network: 'Tron (TRC20)' }
+      }
+
+      return NextResponse.json({
+        success: true,
+        isValid: true,
+        recipient: {
+          name: mainUser.name,
+          address: address,
+          isBroker: false,
+          ...walletInfo
+        }
+      })
+    }
+
+    // 2️⃣ Check in BROKER database
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/'
+    
+    console.log('🔍 Checking broker database for address:', address)
+    
+    brokerConnection = await mongoose.createConnection(BROKER_WALLET_URI, {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+    }).asPromise()
+
+    const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
+
+    const brokerUser = await BrokerUserModel.findOne({
+      $or: [
+        { 'wallets.btc.address': address },
+        { 'wallets.btc.legacyAddress': address },
+        { 'wallets.eth.address': address },
+        { 'wallets.usdt_trc20.address': address }
+      ]
+    })
+
+    if (brokerUser) {
+      console.log('✅ Found in broker database:', brokerUser.name)
+      
+      let walletInfo = {}
+      
+      if (brokerUser.wallets?.btc?.address === address || brokerUser.wallets?.btc?.legacyAddress === address) {
+        walletInfo = { symbol: 'BTC', currency: 'Bitcoin', network: 'Bitcoin Mainnet' }
+      } else if (brokerUser.wallets?.eth?.address === address) {
+        walletInfo = { symbol: 'ETH', currency: 'Ethereum', network: 'Ethereum Mainnet' }
+      } else if (brokerUser.wallets?.usdt_trc20?.address === address) {
+        walletInfo = { symbol: 'USDT', currency: 'Tether', network: 'Tron (TRC20)' }
+      }
+
+      return NextResponse.json({
+        success: true,
+        isValid: true,
+        recipient: {
+          name: brokerUser.name,
+          address: address,
+          isBroker: true,
+          ...walletInfo
+        }
+      })
+    }
+
+    // Not found in either database
+    return NextResponse.json({
+      success: true,
+      isValid: false,
+      error: 'Wallet address not found'
+    })
+
+  } catch (error) {
+    console.error('❌ Error validating address:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to validate address', details: error.message },
+      { status: 500 }
+    )
+  } finally {
+    if (brokerConnection) {
+      await brokerConnection.close()
+    }
+  }
+}
+
+// ============================================================================
+// POST - Execute Transfer (Main User → Main User OR Main User → Broker)
+// ============================================================================
+export async function POST(request) {
+  let brokerConnection = null
+  let session = null
+
+  try {
+    const token = request.headers.get('authorization')?.replace('Bearer ', '')
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
 
     const body = await request.json()
     const { recipientAddress, asset, amount, notes } = body
@@ -148,867 +151,393 @@ export async function POST(request) {
     // Validate required fields
     if (!recipientAddress || !asset || !amount) {
       return NextResponse.json(
-        { success: false, error: 'Recipient address, asset, and amount are required' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Validate asset is supported
-    const assetSymbol = asset.toUpperCase()
-    if (!SUPPORTED_ASSETS.includes(assetSymbol)) {
+    if (amount <= 0) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `Asset ${assetSymbol} is not supported for internal transfers. Supported assets: ${SUPPORTED_ASSETS.join(', ')}` 
-        },
+        { success: false, error: 'Amount must be greater than 0' },
         { status: 400 }
-      )
-    }
-
-    // Validate amount
-    const transferAmount = parseFloat(amount)
-    if (isNaN(transferAmount) || transferAmount <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Amount must be greater than zero' },
-        { status: 400 }
-      )
-    }
-
-    // Validate precision (max 8 decimal places for crypto)
-    const decimalPlaces = (transferAmount.toString().split('.')[1] || '').length
-    if (decimalPlaces > 8) {
-      return NextResponse.json(
-        { success: false, error: 'Amount cannot have more than 8 decimal places' },
-        { status: 400 }
-      )
-    }
-
-    // Validate minimum transfer amount
-    const minAmount = MIN_TRANSFER_AMOUNTS[assetSymbol] || 0.00000001
-    if (transferAmount < minAmount) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Minimum transfer amount for ${assetSymbol} is ${minAmount} ${assetSymbol}` 
-        },
-        { status: 400 }
-      )
-    }
-
-    const senderId = decoded.userId
-
-    // Start transaction session
-    session.startTransaction()
-
-    try {
-      // ===== BROKER WALLET TRANSFER LOGIC =====
-      // Check if destination is a broker wallet address in BROKER_WALLET database
-      console.log('🔍 Checking BROKER_WALLET database...')
-      console.log('   Address:', recipientAddress)
-      console.log('   Symbol:', assetSymbol)
-      
-      const brokerWallet = await findBrokerWallet(recipientAddress, assetSymbol)
-
-      if (brokerWallet) {
-        // === BROKER TRANSFER: Process instant transfer to broker account ===
-        console.log('🚀 Processing broker transfer...')
-        console.log('📄 Using broker document as-is from your database')
-        
-        return await processBrokerTransfer({
-          session,
-          senderId: decoded.userId,
-          recipientAddress,
-          assetSymbol,
-          transferAmount,
-          notes,
-          brokerWallet
-        })
-      }
-      
-      console.log('ℹ️  Not a broker wallet, checking internal user wallets...')
-
-      // ===== INTERNAL USER TRANSFER LOGIC (EXISTING) =====
-      // 1. Find recipient by wallet address
-      const recipientWallet = await Wallet.findOne({ 
-        address: recipientAddress,
-        symbol: assetSymbol 
-      }).session(session)
-
-      if (!recipientWallet) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { success: false, error: 'Recipient wallet not found. Address does not exist in system.' },
-          { status: 404 }
-        )
-      }
-
-      const recipientId = recipientWallet.userId
-
-      // Check if trying to send to self
-      if (senderId.toString() === recipientId.toString()) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { success: false, error: 'Cannot send to your own wallet' },
-          { status: 400 }
-        )
-      }
-
-      // 2. Check sender's balance
-      const senderPortfolio = await Portfolio.findOne({ 
-        userId: senderId, 
-        symbol: assetSymbol 
-      }).session(session)
-
-      if (!senderPortfolio) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `You don't have any ${assetSymbol} in your portfolio. Please buy some first.` 
-          },
-          { status: 400 }
-        )
-      }
-
-      if (senderPortfolio.holdings < transferAmount) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Insufficient balance. You have ${senderPortfolio.holdings.toFixed(8)} ${assetSymbol}, trying to send ${transferAmount.toFixed(8)} ${assetSymbol}` 
-          },
-          { status: 400 }
-        )
-      }
-
-      // Check if user is trying to send exact balance (leave small buffer for UI display)
-      const remainingBalance = senderPortfolio.holdings - transferAmount
-      if (remainingBalance > 0 && remainingBalance < 0.00000001) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Amount would leave a dust balance. Please send your full balance or leave a meaningful amount.' 
-          },
-          { status: 400 }
-        )
-      }
-
-      // 3. Get sender and recipient user details
-      const [sender, recipient] = await Promise.all([
-        User.findById(senderId).session(session),
-        User.findById(recipientId).session(session)
-      ])
-
-      if (!sender || !recipient) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        )
-      }
-
-      // Get sender's wallet for the 'from' field
-      const senderWallet = await Wallet.findOne({
-        userId: senderId,
-        symbol: assetSymbol,
-        isDefault: true
-      }).session(session)
-
-      // 4. Get asset details and real-time price
-      const assetDetails = getAssetDetails(assetSymbol)
-
-      // Fetch real-time price from market data
-      let currentPrice = 0
-      try {
-        const priceData = await getSimplePrices([assetSymbol])
-        currentPrice = priceData[0]?.price || 0
-      } catch (error) {
-        console.error('Error fetching price, using fallback:', error)
-        currentPrice = getFallbackPrice(assetSymbol)
-      }
-
-      if (currentPrice === 0) {
-        await session.abortTransaction()
-        return NextResponse.json(
-          { success: false, error: 'Unable to fetch current market price. Please try again.' },
-          { status: 503 }
-        )
-      }
-
-      const transactionValue = transferAmount * currentPrice
-      
-      // Calculate network fee (0.1% of transaction value, min $0.01, max $10)
-      const feePercentage = 0.001 // 0.1%
-      const calculatedFee = transactionValue * feePercentage
-      const networkFee = Math.max(0.01, Math.min(10, calculatedFee))
-
-      // 5. Update portfolios
-      // Deduct from sender
-      await Portfolio.findOneAndUpdate(
-        { userId: senderId, symbol: assetSymbol },
-        { $inc: { holdings: -transferAmount } },
-        { session, new: true }
-      )
-
-      // Add to recipient (or create if doesn't exist)
-      const recipientPortfolio = await Portfolio.findOne({ 
-        userId: recipientId, 
-        symbol: assetSymbol 
-      }).session(session)
-
-      if (recipientPortfolio) {
-        await Portfolio.findOneAndUpdate(
-          { userId: recipientId, symbol: assetSymbol },
-          { $inc: { holdings: transferAmount } },
-          { session, new: true }
-        )
-      } else {
-        await Portfolio.create([{
-          userId: recipientId,
-          symbol: assetSymbol,
-          holdings: transferAmount,
-          averageBuyPrice: 0
-        }], { session })
-      }
-
-      // 6. Create transaction records
-      const timestamp = new Date()
-
-      // Sender's transaction (send)
-      const senderTransaction = await Transaction.create([{
-        userId: senderId,
-        type: 'send',
-        asset: assetSymbol,
-        assetName: assetDetails.name,
-        assetIcon: assetDetails.icon,
-        assetColor: assetDetails.color,
-        amount: transferAmount,
-        price: currentPrice,
-        value: transactionValue,
-        fee: networkFee,
-        status: 'completed',
-        to: recipientAddress,
-        notes: notes || `Sent to ${recipient.firstName} ${recipient.lastName}`,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      }], { session })
-
-      // Recipient's transaction (receive)
-      const recipientTransaction = await Transaction.create([{
-        userId: recipientId,
-        type: 'receive',
-        asset: assetSymbol,
-        assetName: assetDetails.name,
-        assetIcon: assetDetails.icon,
-        assetColor: assetDetails.color,
-        amount: transferAmount,
-        price: currentPrice,
-        value: transactionValue,
-        fee: 0, // Recipient doesn't pay fee
-        status: 'completed',
-        from: senderWallet?.address || 'Unknown',
-        notes: notes || `Received from ${sender.firstName} ${sender.lastName}`,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      }], { session })
-
-      // 7. Create notifications
-      await Promise.all([
-        // Notify sender
-        Notification.create([{
-          userId: senderId,
-          type: 'transaction',
-          title: 'Transfer Sent',
-          message: `You sent ${transferAmount} ${assetSymbol} to ${recipient.firstName} ${recipient.lastName}`,
-          metadata: {
-            transactionId: senderTransaction[0]._id,
-            type: 'send',
-            amount: transferAmount,
-            asset: assetSymbol,
-            recipient: recipient.email
-          }
-        }], { session }),
-        
-        // Notify recipient
-        Notification.create([{
-          userId: recipientId,
-          type: 'transaction',
-          title: 'Transfer Received',
-          message: `You received ${transferAmount} ${assetSymbol} from ${sender.firstName} ${sender.lastName}`,
-          metadata: {
-            transactionId: recipientTransaction[0]._id,
-            type: 'receive',
-            amount: transferAmount,
-            asset: assetSymbol,
-            sender: sender.email
-          }
-        }], { session })
-      ])
-
-      // Commit the transaction
-      await session.commitTransaction()
-
-      // Update stats for both users (non-blocking)
-      queueStatsUpdate(senderId)
-      queueStatsUpdate(recipientId)
-
-      // Send email notifications (non-blocking)
-      // Don't await these - send in background
-      sendTransferSentEmail({
-        recipientEmail: sender.email,
-        recipientName: `${sender.firstName} ${sender.lastName}`,
-        senderName: `${sender.firstName} ${sender.lastName}`,
-        amount: transferAmount,
-        asset: assetSymbol,
-        assetName: assetDetails.name,
-        value: transactionValue,
-        fee: networkFee,
-        recipientAddress,
-      }).catch(error => {
-        console.error('Error sending transfer sent email:', error)
-      })
-
-      sendTransferReceivedEmail({
-        recipientEmail: recipient.email,
-        recipientName: `${recipient.firstName} ${recipient.lastName}`,
-        senderName: `${sender.firstName} ${sender.lastName}`,
-        amount: transferAmount,
-        asset: assetSymbol,
-        assetName: assetDetails.name,
-        value: transactionValue,
-        senderAddress: senderWallet?.address || 'Unknown',
-      }).catch(error => {
-        console.error('Error sending transfer received email:', error)
-      })
-
-      return NextResponse.json({
-        success: true,
-        message: 'Transfer completed successfully',
-        transaction: senderTransaction[0],
-        recipient: {
-          name: `${recipient.firstName} ${recipient.lastName}`,
-          email: recipient.email
-        }
-      }, { status: 200 })
-
-    } catch (error) {
-      // Rollback on error
-      await session.abortTransaction()
-      throw error
-    }
-
-  } catch (error) {
-    console.error('Transfer error:', error)
-    
-    if (error.name === 'ValidationError') {
-      const firstError = Object.values(error.errors)[0]
-      return NextResponse.json(
-        { success: false, error: firstError.message },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || 'Failed to process transfer' 
-      },
-      { status: 500 }
-    )
-  } finally {
-    session.endSession()
-  }
-}
-
-/**
- * GET /api/transactions/transfer/validate
- * Validate recipient address and get recipient info
- */
-export async function GET(request) {
-  try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
       )
     }
 
     await connectDB()
 
-    const { searchParams } = new URL(request.url)
-    const address = searchParams.get('address')
-    const asset = searchParams.get('asset')
-
-    if (!address || !asset) {
+    // Get sender
+    const sender = await User.findById(decoded.userId)
+    if (!sender) {
       return NextResponse.json(
-        { success: false, error: 'Address and asset are required' },
-        { status: 400 }
-      )
-    }
-
-    const assetSymbol = asset.toUpperCase()
-
-    // ===== FIRST: Check if it's a broker wallet =====
-    console.log('🔍 [VALIDATION] Checking BROKER_WALLET database...')
-    console.log('   Address:', address)
-    console.log('   Symbol:', assetSymbol)
-    
-    const brokerWallet = await findBrokerWallet(address, assetSymbol)
-    
-    if (brokerWallet) {
-      console.log('✅ [VALIDATION] Broker wallet found')
-      console.log('📄 User document fields:', Object.keys(brokerWallet))
-      
-      // Extract name and email from user document
-      const brokerAccountName = brokerWallet.name || 
-                               brokerWallet.fullName ||
-                               brokerWallet.username ||
-                               brokerWallet.accountName || 
-                               'Broker Account'
-      
-      const brokerEmail = brokerWallet.email || 
-                         brokerWallet.Email ||
-                         brokerWallet.emailAddress || 
-                         'Not provided'
-      
-      const brokerAddress = brokerWallet.walletAddress || address
-      
-      // Return broker wallet info
-      return NextResponse.json({
-        success: true,
-        valid: true,
-        recipient: {
-          name: brokerAccountName,
-          email: brokerEmail,
-          address: brokerAddress,
-          type: 'broker'
-        }
-      })
-    }
-    
-    console.log('ℹ️  [VALIDATION] Not a broker wallet, checking internal wallets...')
-
-    // ===== SECOND: Check if it's an internal user wallet =====
-    const wallet = await Wallet.findOne({ 
-      address,
-      symbol: assetSymbol 
-    })
-
-    if (!wallet) {
-      console.log('❌ [VALIDATION] Wallet not found in any database')
-      return NextResponse.json(
-        { success: false, error: 'Recipient wallet not found. Address does not exist in system.' },
+        { success: false, error: 'Sender not found' },
         { status: 404 }
       )
     }
 
-    // Check if it's the user's own wallet
-    if (wallet.userId.toString() === decoded.userId) {
+    // Normalize asset symbol
+    const assetKey = asset.toLowerCase()
+    const assetSymbol = asset.toUpperCase()
+
+    // Map asset to wallet key
+    let walletKey = assetKey
+    if (assetKey === 'usdt') walletKey = 'usdt_trc20'
+
+    // Check sender has this wallet
+    if (!sender.wallets || !sender.wallets[walletKey]) {
+      return NextResponse.json(
+        { success: false, error: `You don't have a ${assetSymbol} wallet` },
+        { status: 400 }
+      )
+    }
+
+    // Check sender balance
+    const senderBalance = sender.wallets[walletKey].balance || 0
+    if (senderBalance < amount) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient balance' },
+        { status: 400 }
+      )
+    }
+
+    // Check if sender is sending to themselves
+    const senderAddresses = [
+      sender.wallets.btc?.address,
+      sender.wallets.btc?.legacyAddress,
+      sender.wallets.eth?.address,
+      sender.wallets.usdt_trc20?.address
+    ].filter(Boolean)
+
+    if (senderAddresses.includes(recipientAddress)) {
       return NextResponse.json(
         { success: false, error: 'Cannot send to your own wallet' },
         { status: 400 }
       )
     }
 
-    // Get user info
-    const user = await User.findById(wallet.userId)
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    console.log('✅ [VALIDATION] Internal user wallet found:', user.email)
-    
-    return NextResponse.json({
-      success: true,
-      valid: true,
-      recipient: {
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        address: wallet.address,
-        type: 'user'
-      }
+    // 🔍 Step 1: Check if recipient is in MAIN database
+    const mainRecipient = await User.findOne({
+      $or: [
+        { 'wallets.btc.address': recipientAddress },
+        { 'wallets.btc.legacyAddress': recipientAddress },
+        { 'wallets.eth.address': recipientAddress },
+        { 'wallets.usdt_trc20.address': recipientAddress }
+      ]
     })
 
-  } catch (error) {
-    console.error('Validate address error:', error)
+    if (mainRecipient) {
+      // ✅ MAIN → MAIN Transfer
+      console.log('💸 Processing MAIN → MAIN transfer')
+      return await processMainToMainTransfer({
+        sender,
+        recipient: mainRecipient,
+        recipientAddress,
+        asset: assetSymbol,
+        walletKey,
+        amount,
+        notes
+      })
+    }
+
+    // 🔍 Step 2: Check if recipient is in BROKER database
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/'
+    
+    console.log('🔍 Checking broker database...')
+    
+    brokerConnection = await mongoose.createConnection(BROKER_WALLET_URI, {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+    }).asPromise()
+
+    const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
+    const BrokerTransactionModel = brokerConnection.model('Transaction', new mongoose.Schema({}, { strict: false }), 'transactions')
+
+    const brokerRecipient = await BrokerUserModel.findOne({
+      $or: [
+        { 'wallets.btc.address': recipientAddress },
+        { 'wallets.btc.legacyAddress': recipientAddress },
+        { 'wallets.eth.address': recipientAddress },
+        { 'wallets.usdt_trc20.address': recipientAddress }
+      ]
+    })
+
+    if (brokerRecipient) {
+      // ✅ MAIN → BROKER Transfer
+      console.log('💸 Processing MAIN → BROKER transfer to:', brokerRecipient.name)
+      
+      // Start MongoDB session for atomic transaction
+      session = await mongoose.startSession()
+      session.startTransaction()
+
+      try {
+        // 1️⃣ Deduct from sender's wallet
+        await User.findByIdAndUpdate(
+          sender._id,
+          { 
+            $inc: { 
+              [`wallets.${walletKey}.balance`]: -amount 
+            }
+          },
+          { session, new: true }
+        )
+
+        // 2️⃣ Add to broker's wallet
+        await BrokerUserModel.findByIdAndUpdate(
+          brokerRecipient._id,
+          { 
+            $inc: { 
+              [`wallets.${walletKey}.balance`]: amount 
+            }
+          },
+          { new: true }
+        )
+
+        // 3️⃣ Create "send" transaction in MAIN database
+        const sendTransaction = new Transaction({
+          userId: sender._id,
+          type: 'send',
+          asset: assetSymbol,
+          assetName: getAssetName(assetSymbol),
+          amount: amount,
+          price: 0,
+          value: 0,
+          fee: 0,
+          status: 'completed',
+          to: recipientAddress,
+          toUser: brokerRecipient.name,
+          toEmail: brokerRecipient.email,
+          notes: notes || `Sent to ${brokerRecipient.name} (Broker Account)`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        await sendTransaction.save({ session })
+
+        // 4️⃣ Create "receive" transaction in BROKER database
+        await BrokerTransactionModel.create([{
+          userId: brokerRecipient._id,
+          type: 'receive',
+          asset: assetSymbol,
+          assetName: getAssetName(assetSymbol),
+          amount: amount,
+          price: 0,
+          value: 0,
+          fee: 0,
+          status: 'completed',
+          from: sender.wallets[walletKey].address,
+          fromUser: sender.name,
+          fromEmail: sender.email,
+          notes: `Received from ${sender.name}`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }])
+
+        // Commit transaction
+        await session.commitTransaction()
+
+        // 5️⃣ Send emails
+        try {
+          await sendTransferSentEmail(
+            sender.email,
+            sender.name,
+            brokerRecipient.name,
+            amount,
+            assetSymbol,
+            recipientAddress,
+            sendTransaction._id.toString()
+          )
+
+          await sendTransferReceivedEmail(
+            brokerRecipient.email,
+            brokerRecipient.name,
+            sender.name,
+            amount,
+            assetSymbol,
+            recipientAddress
+          )
+        } catch (emailError) {
+          console.error('❌ Email error:', emailError)
+          // Don't fail the transaction if email fails
+        }
+
+        return NextResponse.json({
+          success: true,
+          transaction: {
+            id: sendTransaction._id,
+            type: 'send',
+            asset: assetSymbol,
+            amount: amount,
+            recipient: brokerRecipient.name,
+            recipientAddress: recipientAddress,
+            isBrokerTransfer: true,
+            status: 'completed',
+            createdAt: sendTransaction.createdAt
+          }
+        })
+
+      } catch (error) {
+        await session.abortTransaction()
+        throw error
+      }
+    }
+
+    // ❌ Recipient not found in either database
     return NextResponse.json(
-      { success: false, error: 'Failed to validate address' },
+      { success: false, error: 'Recipient wallet not found' },
+      { status: 404 }
+    )
+
+  } catch (error) {
+    console.error('❌ Transfer error:', error)
+    if (session) {
+      await session.abortTransaction()
+    }
+    return NextResponse.json(
+      { success: false, error: 'Transfer failed', details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (session) {
+      session.endSession()
+    }
+    if (brokerConnection) {
+      await brokerConnection.close()
+    }
   }
 }
 
-// Helper function to get asset details
-function getAssetDetails(symbol) {
-  const assetMap = {
-    'BTC': { name: 'Bitcoin', icon: '₿', color: '#F7931A' },
-    'ETH': { name: 'Ethereum', icon: 'Ξ', color: '#627EEA' },
-    'USDT': { name: 'Tether', icon: '₮', color: '#26A17B' },
-    'BNB': { name: 'BNB', icon: '◆', color: '#F3BA2F' },
-    'SOL': { name: 'Solana', icon: '◎', color: '#14F195' },
-    'XRP': { name: 'Ripple', icon: '✕', color: '#23292F' },
-    'ADA': { name: 'Cardano', icon: '₳', color: '#0033AD' },
-    'DOGE': { name: 'Dogecoin', icon: 'Ð', color: '#C3A634' },
-    'DOT': { name: 'Polkadot', icon: '●', color: '#E6007A' },
-    'MATIC': { name: 'Polygon', icon: '◇', color: '#8247E5' },
-    'AVAX': { name: 'Avalanche', icon: '▲', color: '#E84142' },
-    'LINK': { name: 'Chainlink', icon: '⬡', color: '#2A5ADA' },
-  }
+// ============================================================================
+// Helper: Process MAIN → MAIN Transfer
+// ============================================================================
+async function processMainToMainTransfer({ sender, recipient, recipientAddress, asset, walletKey, amount, notes }) {
+  const session = await mongoose.startSession()
+  session.startTransaction()
 
-  return assetMap[symbol] || { name: symbol, icon: '●', color: '#888888' }
-}
-
-// Helper function to get fallback price if API fails
-function getFallbackPrice(symbol) {
-  const fallbackPrices = {
-    'BTC': 43000.00,
-    'ETH': 2280.00,
-    'USDT': 1.00,
-    'BNB': 305.00,
-    'SOL': 98.00,
-    'XRP': 0.62,
-  }
-
-  return fallbackPrices[symbol] || 1.00
-}
-
-/**
- * Process transfer from user crypto wallet to broker account
- * Updates BOTH databases: Main DB and Broker DB
- * Creates transaction records in BOTH databases
- * Sends email alerts to BOTH parties
- */
-async function processBrokerTransfer({
-  session,
-  senderId,
-  recipientAddress,
-  assetSymbol,
-  transferAmount,
-  notes,
-  brokerWallet
-}) {
   try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('🚀 BROKER TRANSFER: Starting...')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
-    // 1. Check sender's balance in MAIN database
-    const senderPortfolio = await Portfolio.findOne({ 
-      userId: senderId, 
-      symbol: assetSymbol 
-    }).session(session)
-
-    if (!senderPortfolio) {
-      await session.abortTransaction()
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `You don't have any ${assetSymbol} in your portfolio. Please buy some first.` 
-        },
-        { status: 400 }
-      )
-    }
-
-    if (senderPortfolio.holdings < transferAmount) {
-      await session.abortTransaction()
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Insufficient balance. You have ${senderPortfolio.holdings.toFixed(8)} ${assetSymbol}, trying to send ${transferAmount.toFixed(8)} ${assetSymbol}` 
-        },
-        { status: 400 }
-      )
-    }
-
-    // Check for dust balance
-    const remainingBalance = senderPortfolio.holdings - transferAmount
-    if (remainingBalance > 0 && remainingBalance < 0.00000001) {
-      await session.abortTransaction()
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Amount would leave a dust balance. Please send your full balance or leave a meaningful amount.' 
-        },
-        { status: 400 }
-      )
-    }
-
-    // 2. Get sender user details from MAIN database
-    const sender = await User.findById(senderId).session(session)
-
-    if (!sender) {
-      await session.abortTransaction()
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    // Get sender's wallet for the 'from' field
-    const senderWallet = await Wallet.findOne({
-      userId: senderId,
-      symbol: assetSymbol,
-      isDefault: true
-    }).session(session)
-
-    // 3. Get asset details and real-time price
-    const assetDetails = getAssetDetails(assetSymbol)
-
-    // Fetch real-time price
-    let currentPrice = 0
-    try {
-      const priceData = await getSimplePrices([assetSymbol])
-      currentPrice = priceData[0]?.price || 0
-    } catch (error) {
-      console.error('Error fetching price, using fallback:', error)
-      currentPrice = getFallbackPrice(assetSymbol)
-    }
-
-    if (currentPrice === 0) {
-      await session.abortTransaction()
-      return NextResponse.json(
-        { success: false, error: 'Unable to fetch current market price. Please try again.' },
-        { status: 503 }
-      )
-    }
-
-    const transactionValue = transferAmount * currentPrice
-    
-    // Calculate network fee (0.1% of transaction value, min $0.01, max $10)
-    const feePercentage = 0.001 // 0.1%
-    const calculatedFee = transactionValue * feePercentage
-    const networkFee = Math.max(0.01, Math.min(10, calculatedFee))
-
-    console.log('💰 Transaction Details:')
-    console.log(`   Amount: ${transferAmount} ${assetSymbol}`)
-    console.log(`   Value: $${transactionValue.toFixed(2)}`)
-    console.log(`   Fee: $${networkFee.toFixed(2)}`)
-
-    // ═══════════════════════════════════════════════════════════
-    // MAIN DATABASE UPDATES
-    // ═══════════════════════════════════════════════════════════
-    console.log('\n📦 MAIN DATABASE (tadiowallet):')
-    
-    // 4. Deduct from user's crypto wallet
-    await Portfolio.findOneAndUpdate(
-      { userId: senderId, symbol: assetSymbol },
-      { $inc: { holdings: -transferAmount } },
+    // 1️⃣ Deduct from sender
+    await User.findByIdAndUpdate(
+      sender._id,
+      { 
+        $inc: { 
+          [`wallets.${walletKey}.balance`]: -amount 
+        }
+      },
       { session, new: true }
     )
-    console.log(`   ✅ Portfolio updated: -${transferAmount} ${assetSymbol}`)
 
-    // Extract broker account info
-    const brokerAccountName = brokerWallet.name || 
-                             brokerWallet.fullName || 
-                             brokerWallet.username ||
-                             brokerWallet.accountName || 
-                             'Broker Account'
-    
-    const brokerEmail = brokerWallet.email || 
-                       brokerWallet.Email ||
-                       brokerWallet.emailAddress || 
-                       'Not provided'
+    // 2️⃣ Add to recipient
+    await User.findByIdAndUpdate(
+      recipient._id,
+      { 
+        $inc: { 
+          [`wallets.${walletKey}.balance`]: amount 
+        }
+      },
+      { session, new: true }
+    )
 
-    // 5. Create transaction record for sender in MAIN database
-    const timestamp = new Date()
-    const senderTransaction = await Transaction.create([{
-      userId: senderId,
+    // 3️⃣ Create "send" transaction
+    const sendTransaction = new Transaction({
+      userId: sender._id,
       type: 'send',
-      asset: assetSymbol,
-      assetName: assetDetails.name,
-      assetIcon: assetDetails.icon,
-      assetColor: assetDetails.color,
-      amount: transferAmount,
-      price: currentPrice,
-      value: transactionValue,
-      fee: networkFee,
+      asset: asset,
+      assetName: getAssetName(asset),
+      amount: amount,
+      price: 0,
+      value: 0,
+      fee: 0,
       status: 'completed',
       to: recipientAddress,
-      notes: notes || `Transfer to Broker Account (${brokerAccountName})`,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    }], { session })
-    console.log(`   ✅ Transaction created: ${senderTransaction[0]._id}`)
-
-    // 6. Create notification for sender in MAIN database
-    await Notification.create([{
-      userId: senderId,
-      type: 'transaction',
-      title: 'Transfer to Broker Account',
-      message: `You sent ${transferAmount} ${assetSymbol} to your broker account (${brokerAccountName})`,
-      metadata: {
-        transactionId: senderTransaction[0]._id,
-        type: 'send',
-        amount: transferAmount,
-        asset: assetSymbol,
-        recipient: brokerAccountName,
-        recipientType: 'broker'
-      }
-    }], { session })
-    console.log('   ✅ Notification created')
-
-    // ═══════════════════════════════════════════════════════════
-    // BROKER DATABASE UPDATES
-    // ═══════════════════════════════════════════════════════════
-    console.log('\n📦 BROKER DATABASE (cluster0):')
-    
-    if (brokerConnection && brokerWallet.userId) {
-      const collections = await brokerConnection.db.listCollections().toArray()
-      const symbolLower = assetSymbol.toLowerCase()
-      
-      // Find which collection has the broker user
-      for (const collectionInfo of collections) {
-        const collection = brokerConnection.db.collection(collectionInfo.name)
-        
-        const existingDoc = await collection.findOne({ _id: brokerWallet.userId })
-        
-        if (existingDoc) {
-          // 7. Update broker wallet balance
-          const walletData = existingDoc.wallets?.[symbolLower] || 
-                            existingDoc.wallets?.[assetSymbol] || 
-                            existingDoc.wallets?.[assetSymbol.toUpperCase()]
-          
-          let balanceField = `wallets.${symbolLower}.balance`
-          
-          if (walletData) {
-            if (walletData.balance !== undefined) {
-              balanceField = `wallets.${symbolLower}.balance`
-            } else if (walletData.amount !== undefined) {
-              balanceField = `wallets.${symbolLower}.amount`
-            } else if (walletData.holdings !== undefined) {
-              balanceField = `wallets.${symbolLower}.holdings`
-            }
-          }
-          
-          await collection.updateOne(
-            { _id: brokerWallet.userId },
-            { $inc: { [balanceField]: transferAmount } }
-          )
-          console.log(`   ✅ Wallet balance updated: +${transferAmount} ${assetSymbol}`)
-          console.log(`   Field: ${balanceField}`)
-          
-          // 8. Create transaction record in BROKER database
-          const transactionsCollection = brokerConnection.db.collection('transactions')
-          
-          const brokerTransactionDoc = {
-            userId: brokerWallet.userId,
-            type: 'receive',
-            asset: assetSymbol,
-            assetName: assetDetails.name,
-            amount: transferAmount,
-            price: currentPrice,
-            value: transactionValue,
-            fee: 0, // Receiver doesn't pay fee
-            status: 'completed',
-            from: senderWallet?.address || 'Unknown',
-            fromUser: `${sender.firstName} ${sender.lastName}`,
-            fromEmail: sender.email,
-            notes: `Received from ${sender.firstName} ${sender.lastName}`,
-            createdAt: timestamp,
-            updatedAt: timestamp
-          }
-          
-          await transactionsCollection.insertOne(brokerTransactionDoc)
-          console.log('   ✅ Transaction record created in broker DB')
-          
-          break
-        }
-      }
-    }
-
-    // Commit the transaction
-    await session.commitTransaction()
-    console.log('\n✅ All database updates committed successfully!')
-
-    // Update stats for sender (non-blocking)
-    queueStatsUpdate(senderId)
-
-    // ═══════════════════════════════════════════════════════════
-    // EMAIL NOTIFICATIONS
-    // ═══════════════════════════════════════════════════════════
-    console.log('\n📧 Sending Email Notifications:')
-    
-    // Email to SENDER (crypto wallet user)
-    sendTransferSentEmail({
-      recipientEmail: sender.email,
-      recipientName: `${sender.firstName} ${sender.lastName}`,
-      senderName: `${sender.firstName} ${sender.lastName}`,
-      amount: transferAmount,
-      asset: assetSymbol,
-      assetName: assetDetails.name,
-      value: transactionValue,
-      fee: networkFee,
-      recipientAddress,
-    }).then(() => {
-      console.log(`   ✅ Email sent to sender: ${sender.email}`)
-    }).catch(error => {
-      console.error('   ❌ Error sending sender email:', error.message)
+      toUser: recipient.name,
+      toEmail: recipient.email,
+      notes: notes || `Sent to ${recipient.name}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
-    
-    // Email to BROKER (broker account owner)
-    if (brokerEmail && brokerEmail !== 'Not provided') {
-      sendTransferReceivedEmail({
-        recipientEmail: brokerEmail,
-        recipientName: brokerAccountName,
-        senderName: `${sender.firstName} ${sender.lastName}`,
-        amount: transferAmount,
-        asset: assetSymbol,
-        assetName: assetDetails.name,
-        value: transactionValue,
-        senderAddress: senderWallet?.address || 'Unknown',
-      }).then(() => {
-        console.log(`   ✅ Email sent to broker: ${brokerEmail}`)
-      }).catch(error => {
-        console.error('   ❌ Error sending broker email:', error.message)
-      })
-    } else {
-      console.log('   ⚠️  No broker email found, skipping broker notification')
-    }
+    await sendTransaction.save({ session })
 
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('✅ BROKER TRANSFER: Complete!')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
+    // 4️⃣ Create "receive" transaction
+    const receiveTransaction = new Transaction({
+      userId: recipient._id,
+      type: 'receive',
+      asset: asset,
+      assetName: getAssetName(asset),
+      amount: amount,
+      price: 0,
+      value: 0,
+      fee: 0,
+      status: 'completed',
+      from: sender.wallets[walletKey].address,
+      fromUser: sender.name,
+      fromEmail: sender.email,
+      notes: `Received from ${sender.name}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    await receiveTransaction.save({ session })
+
+    await session.commitTransaction()
+
+    // 5️⃣ Send emails
+    try {
+      await sendTransferSentEmail(
+        sender.email,
+        sender.name,
+        recipient.name,
+        amount,
+        asset,
+        recipientAddress,
+        sendTransaction._id.toString()
+      )
+
+      await sendTransferReceivedEmail(
+        recipient.email,
+        recipient.name,
+        sender.name,
+        amount,
+        asset,
+        recipientAddress
+      )
+    } catch (emailError) {
+      console.error('❌ Email error:', emailError)
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Transfer to broker account completed successfully',
-      transaction: senderTransaction[0],
-      recipient: {
-        name: brokerAccountName,
-        email: brokerEmail,
-        type: 'broker'
-      },
-      summary: {
-        amount: `${transferAmount} ${assetSymbol}`,
-        value: `$${transactionValue.toFixed(2)}`,
-        fee: `$${networkFee.toFixed(2)}`,
-        mainDbUpdated: true,
-        brokerDbUpdated: true,
-        emailsSent: 2
+      transaction: {
+        id: sendTransaction._id,
+        type: 'send',
+        asset: asset,
+        amount: amount,
+        recipient: recipient.name,
+        recipientAddress: recipientAddress,
+        isBrokerTransfer: false,
+        status: 'completed',
+        createdAt: sendTransaction.createdAt
       }
-    }, { status: 200 })
+    })
 
   } catch (error) {
-    // Rollback on error
     await session.abortTransaction()
-    console.error('❌ BROKER TRANSFER FAILED:', error.message)
     throw error
+  } finally {
+    session.endSession()
   }
+}
+
+// ============================================================================
+// Helper: Get Asset Name
+// ============================================================================
+function getAssetName(symbol) {
+  const assetNames = {
+    'BTC': 'Bitcoin',
+    'ETH': 'Ethereum',
+    'USDT': 'Tether',
+    'SOL': 'Solana',
+    'BNB': 'Binance Coin',
+    'XRP': 'Ripple',
+    'ADA': 'Cardano',
+    'DOGE': 'Dogecoin',
+    'DOT': 'Polkadot',
+    'MATIC': 'Polygon'
+  }
+  return assetNames[symbol] || symbol
 }

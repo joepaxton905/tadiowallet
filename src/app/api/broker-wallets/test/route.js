@@ -4,115 +4,108 @@ import mongoose from 'mongoose'
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/broker-wallets/test
- * Debug endpoint to test broker wallet database connection and list wallets
- * Reads your existing database structure as-is
+ * DEBUG ENDPOINT - Test Broker Database Connection
+ * Visit: http://localhost:3000/api/broker-wallets/test
+ * 
+ * Database: mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/
+ * Structure: users collection with nested wallets (btc, eth, usdt_trc20)
  */
 export async function GET(request) {
-  let connection = null
+  let brokerConnection = null
   
   try {
-    console.log('🔧 Testing BROKER_WALLET database connection...')
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/'
     
-    // Check if BROKER_WALLET_URI is set
-    if (!process.env.BROKER_WALLET_URI) {
-      return NextResponse.json({
-        success: false,
-        error: 'BROKER_WALLET_URI not found in environment variables',
-        hint: 'Add BROKER_WALLET_URI to your .env file'
-      }, { status: 500 })
-    }
-
-    console.log('✅ BROKER_WALLET_URI found')
+    console.log('🔌 Testing broker database connection...')
 
     // Connect to broker database
-    connection = await mongoose.createConnection(process.env.BROKER_WALLET_URI).asPromise()
-    console.log('✅ Connected to BROKER_WALLET database')
+    brokerConnection = await mongoose.createConnection(BROKER_WALLET_URI, {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+    }).asPromise()
+
+    console.log('✅ Connected to broker database!')
+    console.log('📊 Database name:', brokerConnection.db.databaseName)
 
     // List all collections
-    const collections = await connection.db.listCollections().toArray()
-    console.log('📋 Collections found:', collections.map(c => c.name))
+    const collections = await brokerConnection.db.listCollections().toArray()
+    console.log('📋 Collections:', collections.map(c => c.name))
 
-    const allDocuments = []
-    const stats = {
-      totalCollections: collections.length,
-      totalDocuments: 0,
-      collectionDetails: []
-    }
+    // Define flexible model
+    const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
 
-    // Read from all collections and extract wallet addresses
-    const walletAddresses = []
-    
-    for (const collectionInfo of collections) {
-      const collectionName = collectionInfo.name
-      const collection = connection.db.collection(collectionName)
-      
-      const docs = await collection.find({}).limit(100).toArray()
-      const count = await collection.countDocuments()
-      
-      stats.totalDocuments += count
-      stats.collectionDetails.push({
-        name: collectionName,
-        documentCount: count,
-        sampleFields: docs.length > 0 ? Object.keys(docs[0]) : []
-      })
-      
-      // Extract wallet addresses from nested structure: user.wallets.btc.address
-      docs.forEach(doc => {
-        if (doc.wallets) {
-          Object.keys(doc.wallets).forEach(symbol => {
-            const wallet = doc.wallets[symbol]
-            if (wallet && wallet.address) {
-              walletAddresses.push({
-                collection: collectionName,
-                userId: doc._id,
-                symbol: symbol.toUpperCase(),
-                address: wallet.address,
-                balance: wallet.balance || wallet.amount || wallet.holdings || 0,
-                userEmail: doc.email || doc.Email,
-                userName: doc.name || doc.username || doc.fullName
-              })
-            }
-          })
-        }
-        
-        allDocuments.push({
-          collection: collectionName,
-          document: doc
-        })
-      })
-    }
+    // Get all users with wallets
+    const users = await BrokerUserModel.find({}).limit(20)
+
+    const usersWithWallets = users.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      balance: user.balance,
+      wallets: {
+        btc: user.wallets?.btc ? {
+          address: user.wallets.btc.address,
+          legacyAddress: user.wallets.btc.legacyAddress,
+          balance: user.wallets.btc.balance,
+          currency: user.wallets.btc.currency
+        } : null,
+        eth: user.wallets?.eth ? {
+          address: user.wallets.eth.address,
+          balance: user.wallets.eth.balance,
+          currency: user.wallets.eth.currency
+        } : null,
+        usdt_trc20: user.wallets?.usdt_trc20 ? {
+          address: user.wallets.usdt_trc20.address,
+          balance: user.wallets.usdt_trc20.balance,
+          currency: user.wallets.usdt_trc20.currency
+        } : null
+      }
+    }))
+
+    // Test address search
+    const testAddress = 'bc1qu2xf0gq3usyxuqz2u93s9pwx723g0cmv5h2yl3'
+    const foundUser = await BrokerUserModel.findOne({
+      $or: [
+        { 'wallets.btc.address': testAddress },
+        { 'wallets.btc.legacyAddress': testAddress },
+        { 'wallets.eth.address': testAddress },
+        { 'wallets.usdt_trc20.address': testAddress }
+      ]
+    })
+
+    console.log(`✅ Found ${users.length} users in broker database`)
+    console.log(`🔍 Test search for ${testAddress}:`, foundUser ? 'FOUND' : 'NOT FOUND')
 
     return NextResponse.json({
       success: true,
-      message: 'BROKER_WALLET database read successfully',
-      databaseStructure: {
-        uri: 'mongodb+srv://cluster0.hbqidou.mongodb.net/',
-        stats,
-        walletAddresses: walletAddresses.slice(0, 20),
-        sampleDocuments: allDocuments.slice(0, 5).map(item => ({
-          collection: item.collection,
-          fields: Object.keys(item.document),
-          hasWallets: !!item.document.wallets,
-          walletSymbols: item.document.wallets ? Object.keys(item.document.wallets) : [],
-          sample: item.document
-        }))
+      database: brokerConnection.db.databaseName,
+      collections: collections.map(c => c.name),
+      userCount: users.length,
+      users: usersWithWallets,
+      testSearch: {
+        address: testAddress,
+        found: !!foundUser,
+        user: foundUser ? {
+          name: foundUser.name,
+          email: foundUser.email
+        } : null
       },
-      hint: 'Structure is: user.wallets.btc.address, user.wallets.eth.address, etc. Use addresses from walletAddresses array for testing.'
+      message: '✅ Broker database connection successful'
     })
 
   } catch (error) {
-    console.error('❌ Broker wallet test failed:', error)
+    console.error('❌ Broker database test failed:', error)
     
     return NextResponse.json({
       success: false,
       error: error.message,
-      stack: error.stack,
-      hint: 'Check if BROKER_WALLET_URI is correct and database is accessible'
+      stack: error.stack
     }, { status: 500 })
+    
   } finally {
-    if (connection) {
-      await connection.close()
+    if (brokerConnection) {
+      await brokerConnection.close()
+      console.log('🔌 Connection closed')
     }
   }
 }
