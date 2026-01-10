@@ -10,7 +10,13 @@ export default function AdminDashboard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    // Fetch stats immediately on mount
     fetchStats()
+
+    // Set up periodic refresh every 30 seconds for real-time accuracy
+    const interval = setInterval(fetchStats, 30000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const fetchStats = async () => {

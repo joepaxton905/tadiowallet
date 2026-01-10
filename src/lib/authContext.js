@@ -102,6 +102,40 @@ export function AuthProvider({ children }) {
     return !!token && !!user
   }, [token, user])
 
+  const refreshUserProfile = useCallback(async () => {
+    if (!token) return null
+    
+    try {
+      const response = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.user) {
+          // Update user data in state
+          setUser(data.user)
+          
+          // Update storage based on where the current token is stored
+          const storedInLocal = localStorage.getItem('authToken')
+          if (storedInLocal) {
+            localStorage.setItem('user', JSON.stringify(data.user))
+          } else {
+            sessionStorage.setItem('user', JSON.stringify(data.user))
+          }
+          
+          return data.user
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user profile:', error)
+    }
+    return null
+  }, [token])
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -110,7 +144,8 @@ export function AuthProvider({ children }) {
       login,
       logout,
       isAuthenticated,
-      checkAuth
+      checkAuth,
+      refreshUserProfile
     }}>
       {children}
     </AuthContext.Provider>

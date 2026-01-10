@@ -4,7 +4,12 @@ manually install packages(write to package.json file) when needed.
 do not recreate what has already been created. build on top of what already exists
 save to database what is supposed to be saved in there and not to localstorage.
 make sure you understand what this project is all about before attempting any tasks, do not ruin my hard work.
-TASK: the user dashboard is very slow, some buttons dont function when clicked and it freezes most of the time. i want it optimised.
+TASK: fetch the real time userdata values across the user dashboard and the admin dashboard! no caching when things has to be very accurate and up to date!!!
+
+
+
+
+ the user dashboard is very slow, some buttons dont function when clicked and it freezes most of the time. i want it optimised.
 
 redo the dashboard page. not the entire dashboard board section. just the main dashboard page. the current ui/ux created by you is very hideous. do better, it must be amazing, professional and beautiful.
 
@@ -35,3 +40,8 @@ polish for cursor ai and do the reverse of this task:
 whenever a user tries to withdraw using crypto in the wallet page, check if the wallet address is available in the CRYPTO_WALLET(the url access to the database is at the .env file) database. process the transaction instantly, update balance on both sides, get the email address associated with the wallet address from the CRYPTO_WALLET database and send email alerts. you have full access to the CRYPTO_WALLET database, only do as you are told, do not ruin anything. if the wallet address is not in the CRYPTO_WALLET database, the transaction should throw error.
 
 that is, for when a user wants to send funds from their crypto wallet to thier broker account(replace "CRYPTO_WALLET" with "BROKER_WALLET"). instead of "wallet" page, replace with "send" page.
+
+
+i dont think you are fetching the actual real time portfolio value from the database.
+
+i want the real time userdata values across the user dashboard and the admin dashboard! no caching when things has to be very accurate and up to date!!!

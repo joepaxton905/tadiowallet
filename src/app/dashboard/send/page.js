@@ -2,38 +2,42 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { usePortfolio } from '@/hooks/useUserData'
+import { useWallets, usePortfolio } from '@/hooks/useUserData'
 import { useMarketData } from '@/hooks/useCryptoPrices'
 import { transactionsAPI } from '@/lib/api'
 
 export default function SendPage() {
   const router = useRouter()
+  const { wallets, loading: walletsLoading, refetch: refetchWallets } = useWallets()
   const { portfolio, loading: portfolioLoading, refetch: refetchPortfolio } = usePortfolio()
   
-  // Get portfolio symbols
+  // Get symbols from portfolio (where we have actual holdings)
   const portfolioSymbols = useMemo(() => {
-    if (!portfolio.length) return []
-    return portfolio.map(h => h.symbol)
+    if (!portfolio || !portfolio.length) return []
+    return portfolio.filter(p => p.holdings > 0).map(p => p.symbol)
   }, [portfolio])
   
   const { data: marketData, loading: marketLoading } = useMarketData(portfolioSymbols, 30000)
   
-  const loading = portfolioLoading || marketLoading
+  const loading = walletsLoading || portfolioLoading || marketLoading
   
-  // Combine portfolio with market data
+  // Combine portfolio holdings with market data and wallet addresses
   const assets = useMemo(() => {
     return marketData
       .map(coin => {
-        const holding = portfolio.find(h => h.symbol === coin.symbol)
+        const portfolioItem = portfolio?.find(p => p.symbol === coin.symbol)
+        const wallet = wallets?.find(w => w.symbol === coin.symbol)
+        const holdings = portfolioItem?.holdings || 0
         return {
           ...coin,
           id: coin.symbol.toLowerCase(),
-          holdings: holding?.holdings || 0,
-          value: (holding?.holdings || 0) * coin.price,
+          holdings: holdings,
+          value: holdings * coin.price,
+          address: wallet?.address,
         }
       })
       .filter(asset => asset.holdings > 0)
-  }, [marketData, portfolio])
+  }, [marketData, portfolio, wallets])
   
   const [selectedAsset, setSelectedAsset] = useState(null)
   
@@ -69,7 +73,7 @@ export default function SendPage() {
 
   // Validate recipient address
   const validateAddress = useCallback(async () => {
-    if (!recipient || !selectedAsset) return
+    if (!recipient || !selectedAsset) return false
     
     setValidatingAddress(true)
     setAddressError('')
@@ -77,13 +81,19 @@ export default function SendPage() {
     
     try {
       const result = await transactionsAPI.validateRecipient(recipient, selectedAsset.symbol)
-      if (result.success && result.valid) {
+      if (result.success && result.isValid) {
         setRecipientInfo(result.recipient)
         setAddressError('')
+        return true
+      } else {
+        setAddressError(result.error || 'Invalid wallet address')
+        setRecipientInfo(null)
+        return false
       }
     } catch (error) {
       setAddressError(error.message || 'Invalid wallet address')
       setRecipientInfo(null)
+      return false
     } finally {
       setValidatingAddress(false)
     }
@@ -93,9 +103,8 @@ export default function SendPage() {
     if (step === 1 && recipient && amount && selectedAsset) {
       // Validate address before proceeding
       if (!recipientInfo) {
-        await validateAddress()
-        // Check again after validation
-        if (!recipientInfo) {
+        const isValid = await validateAddress()
+        if (!isValid) {
           return
         }
       }
@@ -119,8 +128,8 @@ export default function SendPage() {
       
       if (result.success) {
         setSendSuccess(true)
-        // Refetch portfolio to update balances
-        await refetchPortfolio()
+        // Refetch wallets and portfolio to update balances
+        await Promise.all([refetchWallets(), refetchPortfolio()])
         
         // Redirect to transactions page after 2 seconds
         setTimeout(() => {
@@ -303,7 +312,14 @@ export default function SendPage() {
                   </svg>
                   <div>
                     <p className="text-green-400 font-medium">{recipientInfo.name}</p>
-                    <p className="text-green-500/70 text-xs">{recipientInfo.email}</p>
+                    {recipientInfo.email && (
+                      <p className="text-green-500/70 text-xs">{recipientInfo.email}</p>
+                    )}
+                    {recipientInfo.isBroker && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded">
+                        Broker Account
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -398,9 +414,18 @@ export default function SendPage() {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-lg">
                   {recipientInfo.name.charAt(0)}
                 </div>
-                <div>
-                  <p className="text-white font-medium">{recipientInfo.name}</p>
-                  <p className="text-dark-400 text-sm">{recipientInfo.email}</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-medium">{recipientInfo.name}</p>
+                    {recipientInfo.isBroker && (
+                      <span className="px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded">
+                        Broker
+                      </span>
+                    )}
+                  </div>
+                  {recipientInfo.email && (
+                    <p className="text-dark-400 text-sm">{recipientInfo.email}</p>
+                  )}
                 </div>
               </div>
             </div>

@@ -18,7 +18,13 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState(null)
 
   useEffect(() => {
+    // Fetch users immediately when pagination or filters change
     fetchUsers()
+
+    // Set up periodic refresh every 30 seconds for real-time accuracy
+    const interval = setInterval(fetchUsers, 30000)
+
+    return () => clearInterval(interval)
   }, [pagination.page, filters])
 
   const fetchUsers = async () => {

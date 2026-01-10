@@ -23,7 +23,13 @@ export default function AdminUserDetailPage() {
 
   useEffect(() => {
     if (params.userId) {
+      // Fetch user immediately on mount
       fetchUser()
+
+      // Set up periodic refresh every 30 seconds for real-time accuracy
+      const interval = setInterval(fetchUser, 30000)
+
+      return () => clearInterval(interval)
     }
   }, [params.userId])
 

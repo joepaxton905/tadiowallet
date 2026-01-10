@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/models/User'
+import Wallet from '@/models/Wallet'
 import Transaction from '@/models/Transaction'
 import { verifyToken } from '@/lib/auth'
 import mongoose from 'mongoose'
@@ -175,15 +176,12 @@ export async function POST(request) {
     }
 
     // Normalize asset symbol
-    const assetKey = asset.toLowerCase()
     const assetSymbol = asset.toUpperCase()
 
-    // Map asset to wallet key
-    let walletKey = assetKey
-    if (assetKey === 'usdt') walletKey = 'usdt_trc20'
-
-    // Check sender has this wallet
-    if (!sender.wallets || !sender.wallets[walletKey]) {
+    // Get sender's wallet for this asset
+    const senderWallet = await Wallet.getUserWallet(decoded.userId, assetSymbol)
+    
+    if (!senderWallet) {
       return NextResponse.json(
         { success: false, error: `You don't have a ${assetSymbol} wallet` },
         { status: 400 }
@@ -191,23 +189,16 @@ export async function POST(request) {
     }
 
     // Check sender balance
-    const senderBalance = sender.wallets[walletKey].balance || 0
+    const senderBalance = senderWallet.balance || 0
     if (senderBalance < amount) {
       return NextResponse.json(
-        { success: false, error: 'Insufficient balance' },
+        { success: false, error: `Insufficient balance. You have ${senderBalance} ${assetSymbol}` },
         { status: 400 }
       )
     }
 
     // Check if sender is sending to themselves
-    const senderAddresses = [
-      sender.wallets.btc?.address,
-      sender.wallets.btc?.legacyAddress,
-      sender.wallets.eth?.address,
-      sender.wallets.usdt_trc20?.address
-    ].filter(Boolean)
-
-    if (senderAddresses.includes(recipientAddress)) {
+    if (senderWallet.address === recipientAddress) {
       return NextResponse.json(
         { success: false, error: 'Cannot send to your own wallet' },
         { status: 400 }
@@ -229,10 +220,10 @@ export async function POST(request) {
       console.log('💸 Processing MAIN → MAIN transfer')
       return await processMainToMainTransfer({
         sender,
+        senderWallet,
         recipient: mainRecipient,
         recipientAddress,
         asset: assetSymbol,
-        walletKey,
         amount,
         notes
       })
@@ -264,17 +255,21 @@ export async function POST(request) {
       // ✅ MAIN → BROKER Transfer
       console.log('💸 Processing MAIN → BROKER transfer to:', brokerRecipient.name)
       
+      // Map asset to broker's wallet key (btc, eth, usdt_trc20)
+      let brokerWalletKey = assetSymbol.toLowerCase()
+      if (assetSymbol === 'USDT') brokerWalletKey = 'usdt_trc20'
+      
       // Start MongoDB session for atomic transaction
       session = await mongoose.startSession()
       session.startTransaction()
 
       try {
         // 1️⃣ Deduct from sender's wallet
-        await User.findByIdAndUpdate(
-          sender._id,
+        await Wallet.findByIdAndUpdate(
+          senderWallet._id,
           { 
             $inc: { 
-              [`wallets.${walletKey}.balance`]: -amount 
+              balance: -amount 
             }
           },
           { session, new: true }
@@ -285,7 +280,7 @@ export async function POST(request) {
           brokerRecipient._id,
           { 
             $inc: { 
-              [`wallets.${walletKey}.balance`]: amount 
+              [`wallets.${brokerWalletKey}.balance`]: amount 
             }
           },
           { new: true }
@@ -302,6 +297,7 @@ export async function POST(request) {
           value: 0,
           fee: 0,
           status: 'completed',
+          from: senderWallet.address,
           to: recipientAddress,
           toUser: brokerRecipient.name,
           toEmail: brokerRecipient.email,
@@ -312,6 +308,7 @@ export async function POST(request) {
         await sendTransaction.save({ session })
 
         // 4️⃣ Create "receive" transaction in BROKER database
+        const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
         await BrokerTransactionModel.create([{
           userId: brokerRecipient._id,
           type: 'receive',
@@ -322,10 +319,10 @@ export async function POST(request) {
           value: 0,
           fee: 0,
           status: 'completed',
-          from: sender.wallets[walletKey].address,
-          fromUser: sender.name,
+          from: senderWallet.address,
+          fromUser: senderName,
           fromEmail: sender.email,
-          notes: `Received from ${sender.name}`,
+          notes: `Received from ${senderName}`,
           createdAt: new Date(),
           updatedAt: new Date()
         }])
@@ -335,9 +332,11 @@ export async function POST(request) {
 
         // 5️⃣ Send emails
         try {
+          const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
+          
           await sendTransferSentEmail(
             sender.email,
-            sender.name,
+            senderName,
             brokerRecipient.name,
             amount,
             assetSymbol,
@@ -348,7 +347,7 @@ export async function POST(request) {
           await sendTransferReceivedEmail(
             brokerRecipient.email,
             brokerRecipient.name,
-            sender.name,
+            senderName,
             amount,
             assetSymbol,
             recipientAddress
@@ -407,28 +406,34 @@ export async function POST(request) {
 // ============================================================================
 // Helper: Process MAIN → MAIN Transfer
 // ============================================================================
-async function processMainToMainTransfer({ sender, recipient, recipientAddress, asset, walletKey, amount, notes }) {
+async function processMainToMainTransfer({ sender, senderWallet, recipient, recipientAddress, asset, amount, notes }) {
   const session = await mongoose.startSession()
   session.startTransaction()
 
   try {
+    // Get recipient's wallet
+    const recipientWallet = await Wallet.getUserWallet(recipient._id, asset)
+    if (!recipientWallet) {
+      throw new Error(`Recipient doesn't have a ${asset} wallet`)
+    }
+
     // 1️⃣ Deduct from sender
-    await User.findByIdAndUpdate(
-      sender._id,
+    await Wallet.findByIdAndUpdate(
+      senderWallet._id,
       { 
         $inc: { 
-          [`wallets.${walletKey}.balance`]: -amount 
+          balance: -amount 
         }
       },
       { session, new: true }
     )
 
     // 2️⃣ Add to recipient
-    await User.findByIdAndUpdate(
-      recipient._id,
+    await Wallet.findByIdAndUpdate(
+      recipientWallet._id,
       { 
         $inc: { 
-          [`wallets.${walletKey}.balance`]: amount 
+          balance: amount 
         }
       },
       { session, new: true }
@@ -445,10 +450,11 @@ async function processMainToMainTransfer({ sender, recipient, recipientAddress, 
       value: 0,
       fee: 0,
       status: 'completed',
+      from: senderWallet.address,
       to: recipientAddress,
-      toUser: recipient.name,
+      toUser: recipient.firstName ? `${recipient.firstName} ${recipient.lastName}` : recipient.name,
       toEmail: recipient.email,
-      notes: notes || `Sent to ${recipient.name}`,
+      notes: notes || `Sent to ${recipient.firstName ? `${recipient.firstName} ${recipient.lastName}` : recipient.name}`,
       createdAt: new Date(),
       updatedAt: new Date()
     })
@@ -465,10 +471,10 @@ async function processMainToMainTransfer({ sender, recipient, recipientAddress, 
       value: 0,
       fee: 0,
       status: 'completed',
-      from: sender.wallets[walletKey].address,
-      fromUser: sender.name,
+      from: senderWallet.address,
+      fromUser: sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name,
       fromEmail: sender.email,
-      notes: `Received from ${sender.name}`,
+      notes: `Received from ${sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name}`,
       createdAt: new Date(),
       updatedAt: new Date()
     })
@@ -478,10 +484,13 @@ async function processMainToMainTransfer({ sender, recipient, recipientAddress, 
 
     // 5️⃣ Send emails
     try {
+      const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
+      const recipientName = recipient.firstName ? `${recipient.firstName} ${recipient.lastName}` : recipient.name
+      
       await sendTransferSentEmail(
         sender.email,
-        sender.name,
-        recipient.name,
+        senderName,
+        recipientName,
         amount,
         asset,
         recipientAddress,
@@ -490,8 +499,8 @@ async function processMainToMainTransfer({ sender, recipient, recipientAddress, 
 
       await sendTransferReceivedEmail(
         recipient.email,
-        recipient.name,
-        sender.name,
+        recipientName,
+        senderName,
         amount,
         asset,
         recipientAddress

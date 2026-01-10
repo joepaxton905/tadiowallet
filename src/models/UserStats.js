@@ -256,15 +256,10 @@ userStatsSchema.statics.recalculateAllStats = async function() {
   }
 }
 
-// Static method to get stats for a user
+// Static method to get stats for a user (ALWAYS real-time, no caching)
 userStatsSchema.statics.getUserStats = async function(userId) {
-  let stats = await this.findOne({ userId })
-  
-  // If stats don't exist or are outdated (more than 1 hour old), recalculate
-  if (!stats || (Date.now() - stats.lastCalculated > 60 * 60 * 1000)) {
-    stats = await this.calculateUserStats(userId)
-  }
-  
+  // Always calculate fresh stats for real-time accuracy
+  const stats = await this.calculateUserStats(userId)
   return stats
 }
 

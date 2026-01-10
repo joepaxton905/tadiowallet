@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, memo } from 'react'
+import { useMemo, memo, useEffect } from 'react'
 import { useMarketDataContext } from '@/lib/marketDataContext'
 import { usePortfolio } from '@/hooks/useUserData'
 import { formatPrice } from '@/lib/crypto'
@@ -12,11 +12,28 @@ import MarketOverview from '@/components/dashboard/MarketOverview'
 import { useAuth } from '@/lib/authContext'
 
 function DashboardPage() {
-  const { user } = useAuth()
-  const { portfolio, loading: portfolioLoading } = usePortfolio()
+  const { user, refreshUserProfile } = useAuth()
+  const { portfolio, loading: portfolioLoading, refetch: refetchPortfolio } = usePortfolio()
   const { marketData, loading: marketLoading } = useMarketDataContext()
   
   const loading = portfolioLoading || marketLoading
+
+  // Refresh user profile and portfolio data on mount and periodically
+  useEffect(() => {
+    // Refresh immediately on mount
+    const refreshData = async () => {
+      await Promise.all([
+        refreshUserProfile(),
+        refetchPortfolio()
+      ])
+    }
+    refreshData()
+
+    // Set up periodic refresh every 30 seconds for real-time accuracy
+    const interval = setInterval(refreshData, 30000)
+
+    return () => clearInterval(interval)
+  }, [refreshUserProfile, refetchPortfolio])
   
   // Convert portfolio array to holdings object
   const holdings = useMemo(() => {
