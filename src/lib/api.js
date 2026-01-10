@@ -84,10 +84,10 @@ export const transactionsAPI = {
       body: JSON.stringify(transactionData),
     }),
   
-  transfer: (recipientAddress, asset, amount, notes = '') =>
+  transfer: (recipientAddress, asset, amount, notes = '', price = 0) =>
     apiRequest('/transactions/transfer', {
       method: 'POST',
-      body: JSON.stringify({ recipientAddress, asset, amount, notes }),
+      body: JSON.stringify({ recipientAddress, asset, amount, notes, price }),
     }),
   
   validateRecipient: (address, asset) =>

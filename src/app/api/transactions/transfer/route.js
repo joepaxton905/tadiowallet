@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/models/User'
 import Wallet from '@/models/Wallet'
+import Portfolio from '@/models/Portfolio'
 import Transaction from '@/models/Transaction'
 import { verifyToken } from '@/lib/auth'
 import mongoose from 'mongoose'
@@ -63,14 +64,18 @@ export async function GET(request) {
     }
 
     // 2️⃣ Check in BROKER database
-    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/'
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/test'
     
     console.log('🔍 Checking broker database for address:', address)
+    console.log('🔍 Broker URI:', BROKER_WALLET_URI)
     
     brokerConnection = await mongoose.createConnection(BROKER_WALLET_URI, {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      dbName: 'test' // Explicitly set database name
     }).asPromise()
+
+    console.log('✅ Broker validation connection established, database:', brokerConnection.db.databaseName)
 
     const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
 
@@ -147,7 +152,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { recipientAddress, asset, amount, notes } = body
+    const { recipientAddress, asset, amount, notes, price } = body
 
     // Validate required fields
     if (!recipientAddress || !asset || !amount) {
@@ -156,6 +161,8 @@ export async function POST(request) {
         { status: 400 }
       )
     }
+    
+    console.log('📊 Transfer request - Amount:', amount, asset, 'Price:', price)
 
     if (amount <= 0) {
       return NextResponse.json(
@@ -188,14 +195,23 @@ export async function POST(request) {
       )
     }
 
-    // Check sender balance
-    const senderBalance = senderWallet.balance || 0
+    // Check sender balance from PORTFOLIO (not wallet)
+    const senderPortfolio = await Portfolio.findOne({ 
+      userId: decoded.userId, 
+      symbol: assetSymbol 
+    })
+    
+    const senderBalance = senderPortfolio?.holdings || 0
     if (senderBalance < amount) {
       return NextResponse.json(
         { success: false, error: `Insufficient balance. You have ${senderBalance} ${assetSymbol}` },
         { status: 400 }
       )
     }
+    
+    // Use current market price from request, or fallback to portfolio averageBuyPrice
+    const currentMarketPrice = price || senderPortfolio?.averageBuyPrice || 0
+    console.log('📊 Using market price:', currentMarketPrice, '(from', price ? 'request' : 'portfolio', ')')
 
     // Check if sender is sending to themselves
     if (senderWallet.address === recipientAddress) {
@@ -230,17 +246,20 @@ export async function POST(request) {
     }
 
     // 🔍 Step 2: Check if recipient is in BROKER database
-    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/'
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/test'
     
-    console.log('🔍 Checking broker database...')
+    console.log('🔍 Connecting to broker database:', BROKER_WALLET_URI)
     
     brokerConnection = await mongoose.createConnection(BROKER_WALLET_URI, {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      dbName: 'test' // Explicitly set database name
     }).asPromise()
 
+    console.log('✅ Broker connection established, database:', brokerConnection.db.databaseName)
+
     const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
-    const BrokerTransactionModel = brokerConnection.model('Transaction', new mongoose.Schema({}, { strict: false }), 'transactions')
+    const BrokerDepositModel = brokerConnection.model('Deposit', new mongoose.Schema({}, { strict: false }), 'deposit')
 
     const brokerRecipient = await BrokerUserModel.findOne({
       $or: [
@@ -259,33 +278,104 @@ export async function POST(request) {
       let brokerWalletKey = assetSymbol.toLowerCase()
       if (assetSymbol === 'USDT') brokerWalletKey = 'usdt_trc20'
       
-      // Start MongoDB session for atomic transaction
+      // Start MongoDB session for atomic transaction (main database)
       session = await mongoose.startSession()
       session.startTransaction()
 
       try {
-        // 1️⃣ Deduct from sender's wallet
-        await Wallet.findByIdAndUpdate(
-          senderWallet._id,
+        console.log('🔄 Step 1: Deducting from sender portfolio...')
+        // 1️⃣ Deduct from sender's portfolio
+        const updatedSenderPortfolio = await Portfolio.findOneAndUpdate(
+          { userId: sender._id, symbol: assetSymbol },
           { 
             $inc: { 
-              balance: -amount 
+              holdings: -amount 
             }
           },
           { session, new: true }
         )
+        console.log('✅ Sender portfolio updated:', updatedSenderPortfolio?.holdings)
 
-        // 2️⃣ Add to broker's wallet
-        await BrokerUserModel.findByIdAndUpdate(
+        console.log('🔄 Step 2: Adding to broker wallet balance AND total balance...')
+        console.log('   Broker ID:', brokerRecipient._id)
+        console.log('   Wallet key:', brokerWalletKey)
+        console.log('   Current wallet balance:', brokerRecipient.wallets?.[brokerWalletKey]?.balance)
+        console.log('   Current total balance (USD):', brokerRecipient.balance?.total)
+        console.log('   Adding crypto amount:', amount)
+        
+        // Calculate USD value for balance.total
+        // Priority 1: Use market price from sender's transaction (passed via currentMarketPrice)
+        // Priority 2: Try broker's wallet price
+        // Priority 3: Use fallback estimates
+        let currentPrice = currentMarketPrice || brokerRecipient.wallets?.[brokerWalletKey]?.price || 0
+        
+        console.log('   Market price from sender:', currentMarketPrice)
+        console.log('   Raw price from broker wallet:', brokerRecipient.wallets?.[brokerWalletKey]?.price)
+        
+        // If price not found, use rough estimates as last resort
+        if (!currentPrice || currentPrice === 0) {
+          const priceEstimates = {
+            'BTC': 50000,
+            'ETH': 3000,
+            'USDT': 1,
+            'SOL': 100,
+            'BNB': 300,
+            'XRP': 0.5,
+            'ADA': 0.5,
+            'DOGE': 0.1,
+            'DOT': 7,
+            'MATIC': 0.8
+          }
+          currentPrice = priceEstimates[assetSymbol] || 0
+          console.log('   ⚠️  WARNING: Using estimated price (no real price found!)')
+        }
+        
+        // Use parseFloat and round to 2 decimal places for USD precision
+        const cryptoAmount = parseFloat(amount)
+        const price = parseFloat(currentPrice)
+        const usdValue = parseFloat((cryptoAmount * price).toFixed(2))
+        
+        console.log('   Asset price (USD):', price)
+        console.log('   Crypto amount:', cryptoAmount)
+        console.log('   Calculation:', cryptoAmount, 'x', price, '=', cryptoAmount * price)
+        console.log('   USD value to add (rounded):', usdValue)
+        
+        if (usdValue === 0) {
+          console.warn('⚠️  WARNING: USD value is 0! Price might not be set correctly.')
+          console.warn('   This means balance.total will not increase!')
+        }
+        
+        console.log('')
+        console.log('   MATH CHECK:')
+        console.log('   Current total balance:', brokerRecipient.balance?.total || 0)
+        console.log('   Adding USD value:', usdValue)
+        console.log('   Should become:', (brokerRecipient.balance?.total || 0) + usdValue)
+        
+        // 2️⃣ Add to broker's wallet balance (crypto) AND balance.total (USD)
+        const updatedBrokerUser = await BrokerUserModel.findByIdAndUpdate(
           brokerRecipient._id,
           { 
             $inc: { 
-              [`wallets.${brokerWalletKey}.balance`]: amount 
+              [`wallets.${brokerWalletKey}.balance`]: amount,  // Crypto amount
+              'balance.total': usdValue  // ← USD VALUE!
             }
           },
-          { new: true }
+          { 
+            new: true,
+            writeConcern: { w: 'majority', wtimeout: 5000 }
+          }
         )
+        
+        if (!updatedBrokerUser) {
+          throw new Error('Failed to update broker wallet balance - user not found')
+        }
+        
+        console.log('✅ Broker balances updated!')
+        console.log('   New wallet balance (crypto):', updatedBrokerUser?.wallets?.[brokerWalletKey]?.balance)
+        console.log('   New total balance (USD):', updatedBrokerUser?.balance?.total)
+        console.log('   Full balance object:', JSON.stringify(updatedBrokerUser?.balance, null, 2))
 
+        console.log('🔄 Step 3: Creating send transaction in MAIN database...')
         // 3️⃣ Create "send" transaction in MAIN database
         const sendTransaction = new Transaction({
           userId: sender._id,
@@ -306,52 +396,128 @@ export async function POST(request) {
           updatedAt: new Date()
         })
         await sendTransaction.save({ session })
+        console.log('✅ Send transaction created in MAIN:', sendTransaction._id)
 
-        // 4️⃣ Create "receive" transaction in BROKER database
+        console.log('🔄 Step 4: Creating deposit record in BROKER database...')
+        console.log('   Using database:', brokerConnection.db.databaseName)
+        console.log('   Using collection: deposit')
+        
+        // 4️⃣ Create deposit record in BROKER database
         const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
-        await BrokerTransactionModel.create([{
+        
+        // Get broker's wallet address for this asset
+        const brokerWalletAddress = brokerRecipient.wallets?.[brokerWalletKey]?.address || recipientAddress
+        
+        // Use already calculated values from Step 2 (cryptoAmount, price, usdValue)
+        console.log('   Using calculated values - Crypto:', cryptoAmount, 'Price:', price, 'USD:', usdValue)
+        
+        const brokerDepositData = {
           userId: brokerRecipient._id,
-          type: 'receive',
-          asset: assetSymbol,
-          assetName: getAssetName(assetSymbol),
-          amount: amount,
-          price: 0,
-          value: 0,
-          fee: 0,
+          amount: usdValue,  // USD value
+          currency: assetSymbol,  // BTC, ETH, etc.
+          cryptoAmount: cryptoAmount,  // Actual crypto amount
           status: 'completed',
-          from: senderWallet.address,
-          fromUser: senderName,
+          method: 'crypto_transfer',
+          transactionHash: senderWallet.address,  // From address
+          from: senderName,
           fromEmail: sender.email,
-          notes: `Received from ${senderName}`,
+          notes: `Deposit from ${senderName}`,
           createdAt: new Date(),
           updatedAt: new Date()
-        }])
+        }
+        
+        console.log('📝 Broker deposit data:', JSON.stringify(brokerDepositData, null, 2))
+        
+        // Create the deposit
+        const brokerDeposit = await BrokerDepositModel.create(brokerDepositData)
+        const brokerDepositId = brokerDeposit._id || brokerDeposit[0]?._id
+        
+        if (!brokerDepositId) {
+          throw new Error('Failed to create broker deposit - no ID returned')
+        }
+        
+        console.log('✅ Deposit record created in BROKER:', brokerDepositId)
 
-        // Commit transaction
+        // Commit main database transaction
+        console.log('🔄 Step 5: Committing main database transaction...')
         await session.commitTransaction()
+        console.log('✅ Main database transaction committed')
+
+        // Verify broker deposit was created
+        console.log('🔄 Step 6: Verifying broker deposit...')
+        const verifyBrokerDeposit = await BrokerDepositModel.findById(brokerDepositId)
+        
+        if (verifyBrokerDeposit) {
+          console.log('✅ BROKER DEPOSIT VERIFIED in database!')
+          console.log('   Database:', brokerConnection.db.databaseName)
+          console.log('   Collection: deposit')
+          console.log('   Deposit ID:', verifyBrokerDeposit._id)
+          console.log('   User ID:', verifyBrokerDeposit.userId)
+          console.log('   Amount (USD):', verifyBrokerDeposit.amount)
+          console.log('   Currency:', verifyBrokerDeposit.currency)
+          console.log('   Crypto Amount:', verifyBrokerDeposit.cryptoAmount)
+          console.log('   Status:', verifyBrokerDeposit.status)
+          console.log('   From:', verifyBrokerDeposit.from)
+        } else {
+          console.error('❌ BROKER DEPOSIT NOT FOUND IN DATABASE!')
+          console.error('   Searched in database:', brokerConnection.db.databaseName)
+          console.error('   Searched in collection: deposit')
+          console.error('   Searched for ID:', brokerDepositId)
+          
+          // Try direct database query
+          console.log('🔄 Trying direct database query...')
+          const directQuery = await brokerConnection.db.collection('deposit').findOne({ _id: brokerDepositId })
+          if (directQuery) {
+            console.log('✅ Found via direct query:', directQuery)
+          } else {
+            console.error('❌ Not found via direct query either')
+          }
+          
+          throw new Error('Broker deposit verification failed')
+        }
+        
+        // Also verify broker balance was updated
+        console.log('🔄 Step 7: Verifying broker balance...')
+        const verifyBrokerUser = await BrokerUserModel.findById(brokerRecipient._id)
+        console.log('✅ Broker user balances verified:')
+        console.log('   User:', verifyBrokerUser.name)
+        console.log('   Wallet balance (crypto):', verifyBrokerUser.wallets?.[brokerWalletKey]?.balance, assetSymbol)
+        console.log('   Total balance (USD):', '$' + verifyBrokerUser.balance?.total)
+        console.log('   Full balance object:', JSON.stringify(verifyBrokerUser.balance, null, 2))
+        console.log('')
+        console.log('📊 SUMMARY:')
+        console.log('   Crypto transferred:', amount, assetSymbol)
+        console.log('   USD value:', '$' + usdValue)
+        console.log('   Broker wallet balance updated: +', amount, assetSymbol)
+        console.log('   Broker total balance updated: +$', usdValue)
+        console.log('   Broker deposit record created in "deposit" collection ✅')
 
         // 5️⃣ Send emails
         try {
           const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
           
-          await sendTransferSentEmail(
-            sender.email,
-            senderName,
-            brokerRecipient.name,
-            amount,
-            assetSymbol,
-            recipientAddress,
-            sendTransaction._id.toString()
-          )
+          await sendTransferSentEmail({
+            recipientEmail: sender.email,
+            recipientName: senderName,
+            senderName: senderName,
+            amount: amount,
+            asset: assetSymbol,
+            assetName: getAssetName(assetSymbol),
+            value: 0,
+            fee: 0,
+            recipientAddress: recipientAddress
+          })
 
-          await sendTransferReceivedEmail(
-            brokerRecipient.email,
-            brokerRecipient.name,
-            senderName,
-            amount,
-            assetSymbol,
-            recipientAddress
-          )
+          await sendTransferReceivedEmail({
+            recipientEmail: brokerRecipient.email,
+            recipientName: brokerRecipient.name,
+            senderName: senderName,
+            amount: amount,
+            asset: assetSymbol,
+            assetName: getAssetName(assetSymbol),
+            value: 0,
+            senderAddress: senderWallet.address
+          })
         } catch (emailError) {
           console.error('❌ Email error:', emailError)
           // Don't fail the transaction if email fails
@@ -417,27 +583,43 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
       throw new Error(`Recipient doesn't have a ${asset} wallet`)
     }
 
-    // 1️⃣ Deduct from sender
-    await Wallet.findByIdAndUpdate(
-      senderWallet._id,
+    // 1️⃣ Deduct from sender's portfolio
+    await Portfolio.findOneAndUpdate(
+      { userId: sender._id, symbol: asset },
       { 
         $inc: { 
-          balance: -amount 
+          holdings: -amount 
         }
       },
       { session, new: true }
     )
 
-    // 2️⃣ Add to recipient
-    await Wallet.findByIdAndUpdate(
-      recipientWallet._id,
-      { 
-        $inc: { 
-          balance: amount 
-        }
-      },
-      { session, new: true }
-    )
+    // 2️⃣ Add to recipient's portfolio (create if doesn't exist)
+    const existingRecipientPortfolio = await Portfolio.findOne({ 
+      userId: recipient._id, 
+      symbol: asset 
+    })
+    
+    if (existingRecipientPortfolio) {
+      // Update existing portfolio
+      await Portfolio.findOneAndUpdate(
+        { userId: recipient._id, symbol: asset },
+        { 
+          $inc: { 
+            holdings: amount 
+          }
+        },
+        { session, new: true }
+      )
+    } else {
+      // Create new portfolio entry with default averageBuyPrice of 0 for received transfers
+      await Portfolio.create([{
+        userId: recipient._id,
+        symbol: asset,
+        holdings: amount,
+        averageBuyPrice: 0 // Received transfers have no cost basis
+      }], { session })
+    }
 
     // 3️⃣ Create "send" transaction
     const sendTransaction = new Transaction({
@@ -487,24 +669,28 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
       const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
       const recipientName = recipient.firstName ? `${recipient.firstName} ${recipient.lastName}` : recipient.name
       
-      await sendTransferSentEmail(
-        sender.email,
-        senderName,
-        recipientName,
-        amount,
-        asset,
-        recipientAddress,
-        sendTransaction._id.toString()
-      )
+      await sendTransferSentEmail({
+        recipientEmail: sender.email,
+        recipientName: senderName,
+        senderName: senderName,
+        amount: amount,
+        asset: asset,
+        assetName: getAssetName(asset),
+        value: 0,
+        fee: 0,
+        recipientAddress: recipientAddress
+      })
 
-      await sendTransferReceivedEmail(
-        recipient.email,
-        recipientName,
-        senderName,
-        amount,
-        asset,
-        recipientAddress
-      )
+      await sendTransferReceivedEmail({
+        recipientEmail: recipient.email,
+        recipientName: recipientName,
+        senderName: senderName,
+        amount: amount,
+        asset: asset,
+        assetName: getAssetName(asset),
+        value: 0,
+        senderAddress: senderWallet.address
+      })
     } catch (emailError) {
       console.error('❌ Email error:', emailError)
     }

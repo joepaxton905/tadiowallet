@@ -123,7 +123,8 @@ export default function SendPage() {
         recipient,
         selectedAsset.symbol,
         parseFloat(amount),
-        '' // notes
+        '', // notes
+        selectedAsset.price // current market price
       )
       
       if (result.success) {
