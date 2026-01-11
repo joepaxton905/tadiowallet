@@ -517,13 +517,13 @@ export default function SendPage() {
                 <p>
                   {recipientInfo.isBroker ? (
                     <>
-                      <strong>Broker Transfer:</strong> Funds will be sent to an external broker account. 
-                      Both databases will be updated and confirmation emails sent.
+                      <strong>Broker Transfer:</strong> Funds will be sent to the wallet address. 
+                      
                     </>
                   ) : (
                     <>
                       <strong>Instant Transfer:</strong> {recipientInfo.name} will receive the crypto instantly. 
-                      Both parties will receive confirmation emails.
+                      
                     </>
                   )}
                 </p>
