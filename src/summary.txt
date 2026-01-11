@@ -1,0 +1,100 @@
+What This Project Is
+TadioWallet is a cryptocurrency wallet web application built with Next.js 14, React, MongoDB, and Tailwind CSS. It's a full-stack platform that allows users to manage multiple cryptocurrency wallets, track portfolios, execute transactions, and transfer funds between platform users.
+What Problem It Solves
+This application solves the problem of managing multiple cryptocurrency wallets in one unified platform. It provides:
+Multi-currency wallet management - Users get 6 different cryptocurrency wallets (BTC, ETH, USDT, SOL, XRP, BNB) generated from a single master seed phrase following BIP-44 standards
+Portfolio tracking - Real-time portfolio valuation using live market data from CoinGecko API
+Internal transfers - Users can send crypto to other platform users using wallet addresses
+Broker integration - Users can transfer funds to external "broker" accounts stored in a separate database
+Administrative oversight - Comprehensive admin panel for user management, analytics, and platform monitoring
+How Its Core Parts Work Together
+1. User Authentication & Account Creation
+Sign-up flow (src/app/api/auth/signup/route.js):
+User creates account with email/password
+System generates ONE master seed phrase using bip39
+Six wallet addresses (BTC, ETH, USDT, SOL, XRP, BNB) are derived from this single seed using BIP-44 derivation paths
+Wallets, Portfolio entries (with 0 holdings), and UserStats are initialized in MongoDB
+JWT token is generated and returned for authentication
+2. Database Architecture (MongoDB)
+The app uses 7 core models:
+User - Account information, preferences, KYC status, role (user/admin)
+Wallet - Crypto wallet addresses, private keys (encrypted), seed phrases, balances
+Portfolio - Holdings for each cryptocurrency per user (amount + average buy price)
+Transaction - All transactions (buy, sell, send, receive, swap) with full details
+UserStats - Aggregated metrics (portfolio value, P&L, transaction counts)
+Notification - In-app notifications for users
+ActivityLog - Audit trail for admin actions and security events
+3. Transaction Flow
+Internal Transfers (src/app/api/transactions/transfer/route.js):
+User enters recipient's wallet address and amount
+System validates the address belongs to another platform user
+Fetches real-time crypto price from market data
+Calculates 0.1% transaction fee
+Uses MongoDB transaction session for atomicity:
+Deducts from sender's Portfolio holdings
+Adds to recipient's Portfolio holdings
+Creates "send" transaction for sender
+Creates "receive" transaction for recipient
+Creates notifications for both parties
+Commits all changes or rolls back on failure
+Broker Transfers:
+Similar flow but transfers to external broker database
+Updates both main database and broker database
+Broker database uses different connection string (BROKER_WALLET_URI)
+4. Real-Time Market Data
+CoinGecko API integration (src/lib/crypto.js) provides live prices
+MarketDataContext (src/lib/marketDataContext.js) provides global state
+30-second cache prevents excessive API calls
+Dashboard components calculate portfolio values using: holdings × current_price
+5. Dashboard & UI
+Main Dashboard (src/app/dashboard/page.js):
+Shows total portfolio value, 24h/7d changes
+Asset list with holdings and current values
+Recent transactions
+Market overview
+Quick action buttons
+Portfolio Page: Pie charts, asset allocation, best/worst performers
+Trade Page: Buy/Sell/Swap interface (UI only, transactions happen separately)
+Send/Receive Pages: Transfer crypto and display wallet QR codes
+Transactions Page: Filterable transaction history
+6. Admin Panel (src/app/admin/)
+8 complete admin pages:
+Dashboard - System overview, stats cards
+Analytics - Charts for user growth, transaction volume, asset distribution
+Users - User management (view, suspend, delete, view portfolios)
+Transactions - Monitor all platform transactions
+Portfolios - Platform-wide holdings overview
+Notifications - Broadcast system to all users
+Activity Logs - Audit trail with IP tracking
+Settings - Platform configuration
+Admin authentication uses separate credentials from .env file.
+7. Security & Data Integrity
+JWT tokens for authentication (7-day expiration)
+Private keys & seed phrases stored with select: false (never returned in regular queries)
+MongoDB transactions ensure atomicity - all changes commit together or none do
+User isolation - Users can only access their own data
+Rate limiting and validation on all endpoints
+Plain text passwords (Note: Not hashed - potential security concern)
+8. Data Flow Example - User Transfer
+User A sends 0.5 BTC to User B    ↓Frontend validates inputs → API validates addresses    ↓GET real-time BTC price ($43,250)Calculate value: 0.5 × $43,250 = $21,625Calculate fee: $21,625 × 0.001 = $21.63    ↓Start MongoDB transaction session    ↓Portfolio.update({ userId: A, symbol: BTC }, { $inc: { holdings: -0.5 }})Portfolio.update({ userId: B, symbol: BTC }, { $inc: { holdings: +0.5 }})Transaction.create({ userId: A, type: 'send', ... })Transaction.create({ userId: B, type: 'receive', ... })Notification.create({ userId: A, ... })Notification.create({ userId: B, ... })    ↓Commit transaction (all succeed or all fail)    ↓Queue UserStats recalculation    ↓Return success to frontend    ↓Dashboard auto-refreshes with new balances
+Technology Stack
+Frontend: Next.js 14 (App Router), React 18, Tailwind CSS
+Backend: Next.js API Routes
+Database: MongoDB with Mongoose ODM
+Authentication: JWT (jsonwebtoken)
+Wallet Generation: bip39, bip32, bitcoinjs-lib, ethers, @solana/web3.js
+Market Data: CoinGecko API (free tier)
+Charts: Recharts
+Email: Nodemailer
+QR Codes: qrcode library
+Key Architectural Decisions
+Single seed phrase - All 6 wallets derived from one master seed (BIP-44 standard)
+Database-first - No localStorage for critical data, everything persists to MongoDB
+Real-time calculations - Portfolio values calculated on-the-fly from live prices
+Atomic operations - MongoDB sessions ensure transaction integrity
+Dual database - Main database for platform users, separate broker database for external accounts
+Component architecture - Reusable hooks (usePortfolio, useTransactions, useMarketData) and context providers
+Responsive design - Mobile-first with glass-morphism UI effects
+This is a production-grade cryptocurrency wallet platform with real wallet generation, database persistence, transaction management, and comprehensive administrative tools.
+
+

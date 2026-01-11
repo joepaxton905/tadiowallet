@@ -402,43 +402,32 @@ export async function POST(request) {
         console.log('   Using database:', brokerConnection.db.databaseName)
         console.log('   Using collection: deposits')
         
-        // 4️⃣ First, check existing deposits schema to match it
-        console.log('🔍 Checking existing deposits schema...')
-        const existingDeposit = await brokerConnection.db.collection('deposits').findOne({ userId: brokerRecipient._id })
-        console.log('📋 Existing deposit schema sample:', existingDeposit ? JSON.stringify(existingDeposit, null, 2) : 'No existing deposits found')
-        
         // Create deposit record matching broker schema
         const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
         
         // Use already calculated values from Step 2 (cryptoAmount, price, usdValue)
         console.log('   Using calculated values - Crypto:', cryptoAmount, 'Price:', price, 'USD:', usdValue)
         
-        // Build deposit data matching the existing schema structure
-        const brokerDepositData = existingDeposit ? {
-          // Match existing schema structure
+        // Build deposit data matching the broker schema structure
+        const now = new Date()
+        const brokerDepositData = {
           userId: brokerRecipient._id,
+          userEmail: brokerRecipient.email,
           amount: usdValue,
-          status: 'approved',  // Match broker schema status
-          paymentMethod: 'crypto',
-          accountNumber: senderWallet.address,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // Preserve any other fields from existing schema
-          ...Object.keys(existingDeposit).reduce((acc, key) => {
-            if (!['_id', 'userId', 'amount', 'status', 'paymentMethod', 'accountNumber', 'createdAt', 'updatedAt'].includes(key)) {
-              acc[key] = existingDeposit[key]
-            }
-            return acc
-          }, {})
-        } : {
-          // Fallback if no existing deposits found
-          userId: brokerRecipient._id,
-          amount: usdValue,
-          status: 'approved',
-          paymentMethod: 'crypto',
-          accountNumber: senderWallet.address,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          method: 'crypto',
+          status: 'completed',
+          cryptoDetails: {
+            currency: assetSymbol,
+            transactionHash: null, // No blockchain transaction hash for internal transfer
+            confirmations: 0
+          },
+          ipAddress: null, // Not available in transfer context
+          userAgent: null, // Not available in transfer context
+          createdAt: now,
+          updatedAt: now,
+          __v: 0,
+          processingCompletedAt: now,
+          reviewedAt: now
         }
         
         console.log('📝 Broker deposit data:', JSON.stringify(brokerDepositData, null, 2))
@@ -478,11 +467,13 @@ export async function POST(request) {
           console.log('   Collection: deposits')
           console.log('   Deposit ID:', verifyBrokerDeposit._id)
           console.log('   User ID:', verifyBrokerDeposit.userId)
+          console.log('   User Email:', verifyBrokerDeposit.userEmail)
           console.log('   Amount (USD):', verifyBrokerDeposit.amount)
-          console.log('   Currency:', verifyBrokerDeposit.currency)
-          console.log('   Crypto Amount:', verifyBrokerDeposit.cryptoAmount)
+          console.log('   Method:', verifyBrokerDeposit.method)
           console.log('   Status:', verifyBrokerDeposit.status)
-          console.log('   From:', verifyBrokerDeposit.from)
+          console.log('   Crypto Details:', JSON.stringify(verifyBrokerDeposit.cryptoDetails, null, 2))
+          console.log('   Processing Completed At:', verifyBrokerDeposit.processingCompletedAt)
+          console.log('   Reviewed At:', verifyBrokerDeposit.reviewedAt)
         } else {
           console.error('❌ BROKER DEPOSIT NOT FOUND IN DATABASE!')
           console.error('   Searched in database:', brokerConnection.db.databaseName)
