@@ -64,7 +64,7 @@ export async function GET(request) {
     }
 
     // 2️⃣ Check in BROKER database
-    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/test'
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI
     
     console.log('🔍 Checking broker database for address:', address)
     console.log('🔍 Broker URI:', BROKER_WALLET_URI)
@@ -241,12 +241,13 @@ export async function POST(request) {
         recipientAddress,
         asset: assetSymbol,
         amount,
-        notes
+        notes,
+        price: currentMarketPrice
       })
     }
 
     // 🔍 Step 2: Check if recipient is in BROKER database
-    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI || 'mongodb+srv://maverickandretti:samuellucky12@cluster0.hbqidou.mongodb.net/test'
+    const BROKER_WALLET_URI = process.env.BROKER_WALLET_URI
     
     console.log('🔍 Connecting to broker database:', BROKER_WALLET_URI)
     
@@ -376,6 +377,13 @@ export async function POST(request) {
         console.log('   Full balance object:', JSON.stringify(updatedBrokerUser?.balance, null, 2))
 
         console.log('🔄 Step 3: Creating send transaction in MAIN database...')
+        
+        // Calculate transaction fee (0.1% of value, min $0.01, max $10)
+        const transactionValue = usdValue
+        const feePercentage = 0.001 // 0.1%
+        const calculatedFee = transactionValue * feePercentage
+        const transactionFee = Math.max(0.01, Math.min(10, calculatedFee))
+        
         // 3️⃣ Create "send" transaction in MAIN database
         const sendTransaction = new Transaction({
           userId: sender._id,
@@ -383,9 +391,9 @@ export async function POST(request) {
           asset: assetSymbol,
           assetName: getAssetName(assetSymbol),
           amount: amount,
-          price: 0,
-          value: 0,
-          fee: 0,
+          price: currentPrice,
+          value: transactionValue,
+          fee: transactionFee,
           status: 'completed',
           from: senderWallet.address,
           to: recipientAddress,
@@ -397,6 +405,7 @@ export async function POST(request) {
         })
         await sendTransaction.save({ session })
         console.log('✅ Send transaction created in MAIN:', sendTransaction._id)
+        console.log('   Price:', currentPrice, 'Value:', transactionValue, 'Fee:', transactionFee)
 
         console.log('🔄 Step 4: Creating deposit record in BROKER database...')
         console.log('   Using database:', brokerConnection.db.databaseName)
@@ -519,8 +528,8 @@ export async function POST(request) {
             amount: amount,
             asset: assetSymbol,
             assetName: getAssetName(assetSymbol),
-            value: 0,
-            fee: 0,
+            value: transactionValue,
+            fee: transactionFee,
             recipientAddress: recipientAddress
           })
 
@@ -531,7 +540,7 @@ export async function POST(request) {
             amount: amount,
             asset: assetSymbol,
             assetName: getAssetName(assetSymbol),
-            value: 0,
+            value: transactionValue,
             senderAddress: senderWallet.address
           })
         } catch (emailError) {
@@ -588,7 +597,7 @@ export async function POST(request) {
 // ============================================================================
 // Helper: Process MAIN → MAIN Transfer
 // ============================================================================
-async function processMainToMainTransfer({ sender, senderWallet, recipient, recipientAddress, asset, amount, notes }) {
+async function processMainToMainTransfer({ sender, senderWallet, recipient, recipientAddress, asset, amount, notes, price }) {
   const session = await mongoose.startSession()
   session.startTransaction()
 
@@ -598,6 +607,21 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
     if (!recipientWallet) {
       throw new Error(`Recipient doesn't have a ${asset} wallet`)
     }
+
+    // Get sender's portfolio to get the price
+    const senderPortfolio = await Portfolio.findOne({ 
+      userId: sender._id, 
+      symbol: asset 
+    })
+    
+    // Use passed price or fallback to portfolio's averageBuyPrice
+    const currentPrice = price || senderPortfolio?.averageBuyPrice || 0
+    
+    // Calculate transaction value and fee
+    const transactionValue = parseFloat((amount * currentPrice).toFixed(2))
+    const feePercentage = 0.001 // 0.1%
+    const calculatedFee = transactionValue * feePercentage
+    const transactionFee = Math.max(0.01, Math.min(10, calculatedFee))
 
     // 1️⃣ Deduct from sender's portfolio
     await Portfolio.findOneAndUpdate(
@@ -644,9 +668,9 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
       asset: asset,
       assetName: getAssetName(asset),
       amount: amount,
-      price: 0,
-      value: 0,
-      fee: 0,
+      price: currentPrice,
+      value: transactionValue,
+      fee: transactionFee,
       status: 'completed',
       from: senderWallet.address,
       to: recipientAddress,
@@ -665,9 +689,9 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
       asset: asset,
       assetName: getAssetName(asset),
       amount: amount,
-      price: 0,
-      value: 0,
-      fee: 0,
+      price: currentPrice,
+      value: transactionValue,
+      fee: 0, // Recipient doesn't pay the fee
       status: 'completed',
       from: senderWallet.address,
       fromUser: sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name,
@@ -692,8 +716,8 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
         amount: amount,
         asset: asset,
         assetName: getAssetName(asset),
-        value: 0,
-        fee: 0,
+        value: transactionValue,
+        fee: transactionFee,
         recipientAddress: recipientAddress
       })
 
@@ -704,7 +728,7 @@ async function processMainToMainTransfer({ sender, senderWallet, recipient, reci
         amount: amount,
         asset: asset,
         assetName: getAssetName(asset),
-        value: 0,
+        value: transactionValue,
         senderAddress: senderWallet.address
       })
     } catch (emailError) {
