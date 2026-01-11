@@ -259,7 +259,7 @@ export async function POST(request) {
     console.log('✅ Broker connection established, database:', brokerConnection.db.databaseName)
 
     const BrokerUserModel = brokerConnection.model('User', new mongoose.Schema({}, { strict: false }), 'users')
-    const BrokerDepositModel = brokerConnection.model('Deposit', new mongoose.Schema({}, { strict: false }), 'deposit')
+    const BrokerDepositModel = brokerConnection.model('Deposit', new mongoose.Schema({}, { strict: false }), 'deposits')
 
     const brokerRecipient = await BrokerUserModel.findOne({
       $or: [
@@ -400,43 +400,68 @@ export async function POST(request) {
 
         console.log('🔄 Step 4: Creating deposit record in BROKER database...')
         console.log('   Using database:', brokerConnection.db.databaseName)
-        console.log('   Using collection: deposit')
+        console.log('   Using collection: deposits')
         
-        // 4️⃣ Create deposit record in BROKER database
+        // 4️⃣ First, check existing deposits schema to match it
+        console.log('🔍 Checking existing deposits schema...')
+        const existingDeposit = await brokerConnection.db.collection('deposits').findOne({ userId: brokerRecipient._id })
+        console.log('📋 Existing deposit schema sample:', existingDeposit ? JSON.stringify(existingDeposit, null, 2) : 'No existing deposits found')
+        
+        // Create deposit record matching broker schema
         const senderName = sender.firstName ? `${sender.firstName} ${sender.lastName}` : sender.name
-        
-        // Get broker's wallet address for this asset
-        const brokerWalletAddress = brokerRecipient.wallets?.[brokerWalletKey]?.address || recipientAddress
         
         // Use already calculated values from Step 2 (cryptoAmount, price, usdValue)
         console.log('   Using calculated values - Crypto:', cryptoAmount, 'Price:', price, 'USD:', usdValue)
         
-        const brokerDepositData = {
+        // Build deposit data matching the existing schema structure
+        const brokerDepositData = existingDeposit ? {
+          // Match existing schema structure
           userId: brokerRecipient._id,
-          amount: usdValue,  // USD value
-          currency: assetSymbol,  // BTC, ETH, etc.
-          cryptoAmount: cryptoAmount,  // Actual crypto amount
-          status: 'completed',
-          method: 'crypto_transfer',
-          transactionHash: senderWallet.address,  // From address
-          from: senderName,
-          fromEmail: sender.email,
-          notes: `Deposit from ${senderName}`,
+          amount: usdValue,
+          status: 'approved',  // Match broker schema status
+          paymentMethod: 'crypto',
+          accountNumber: senderWallet.address,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          // Preserve any other fields from existing schema
+          ...Object.keys(existingDeposit).reduce((acc, key) => {
+            if (!['_id', 'userId', 'amount', 'status', 'paymentMethod', 'accountNumber', 'createdAt', 'updatedAt'].includes(key)) {
+              acc[key] = existingDeposit[key]
+            }
+            return acc
+          }, {})
+        } : {
+          // Fallback if no existing deposits found
+          userId: brokerRecipient._id,
+          amount: usdValue,
+          status: 'approved',
+          paymentMethod: 'crypto',
+          accountNumber: senderWallet.address,
           createdAt: new Date(),
           updatedAt: new Date()
         }
         
         console.log('📝 Broker deposit data:', JSON.stringify(brokerDepositData, null, 2))
         
-        // Create the deposit
-        const brokerDeposit = await BrokerDepositModel.create(brokerDepositData)
+        // Create the deposit with explicit writeConcern
+        let brokerDeposit
+        try {
+          brokerDeposit = await BrokerDepositModel.create(brokerDepositData)
+          console.log('✅ Raw deposit creation result:', brokerDeposit)
+        } catch (createError) {
+          console.error('❌ Error creating deposit:', createError)
+          throw new Error(`Failed to create broker deposit: ${createError.message}`)
+        }
+        
         const brokerDepositId = brokerDeposit._id || brokerDeposit[0]?._id
         
         if (!brokerDepositId) {
+          console.error('❌ No deposit ID returned after creation!')
+          console.error('   brokerDeposit:', brokerDeposit)
           throw new Error('Failed to create broker deposit - no ID returned')
         }
         
-        console.log('✅ Deposit record created in BROKER:', brokerDepositId)
+        console.log('✅ Deposit record created in BROKER with ID:', brokerDepositId)
 
         // Commit main database transaction
         console.log('🔄 Step 5: Committing main database transaction...')
@@ -450,7 +475,7 @@ export async function POST(request) {
         if (verifyBrokerDeposit) {
           console.log('✅ BROKER DEPOSIT VERIFIED in database!')
           console.log('   Database:', brokerConnection.db.databaseName)
-          console.log('   Collection: deposit')
+          console.log('   Collection: deposits')
           console.log('   Deposit ID:', verifyBrokerDeposit._id)
           console.log('   User ID:', verifyBrokerDeposit.userId)
           console.log('   Amount (USD):', verifyBrokerDeposit.amount)
@@ -461,12 +486,12 @@ export async function POST(request) {
         } else {
           console.error('❌ BROKER DEPOSIT NOT FOUND IN DATABASE!')
           console.error('   Searched in database:', brokerConnection.db.databaseName)
-          console.error('   Searched in collection: deposit')
+          console.error('   Searched in collection: deposits')
           console.error('   Searched for ID:', brokerDepositId)
           
           // Try direct database query
           console.log('🔄 Trying direct database query...')
-          const directQuery = await brokerConnection.db.collection('deposit').findOne({ _id: brokerDepositId })
+          const directQuery = await brokerConnection.db.collection('deposits').findOne({ _id: brokerDepositId })
           if (directQuery) {
             console.log('✅ Found via direct query:', directQuery)
           } else {
@@ -490,7 +515,7 @@ export async function POST(request) {
         console.log('   USD value:', '$' + usdValue)
         console.log('   Broker wallet balance updated: +', amount, assetSymbol)
         console.log('   Broker total balance updated: +$', usdValue)
-        console.log('   Broker deposit record created in "deposit" collection ✅')
+        console.log('   Broker deposit record created in "deposits" collection ✅')
 
         // 5️⃣ Send emails
         try {
