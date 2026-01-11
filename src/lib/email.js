@@ -13,6 +13,7 @@ const EMAIL_USER = process.env.EMAIL_USER
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD
 const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER
 const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'TadioWallet'
+const RECIEVER_COMPANY_NAME = process.env.NEXT_PUBLIC_RECIEVER_COMPANY_NAME || 'Quantummarkets'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 // Create reusable transporter

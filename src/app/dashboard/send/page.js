@@ -306,20 +306,40 @@ export default function SendPage() {
             
             {/* Recipient Info */}
             {recipientInfo && (
-              <div className="mt-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className={`mt-2 p-3 rounded-lg ${
+                recipientInfo.isBroker 
+                  ? 'bg-primary-500/10 border border-primary-500/20' 
+                  : 'bg-green-500/10 border border-green-500/20'
+              }`}>
                 <div className="flex items-center gap-2 text-sm">
-                  <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <div>
-                    <p className="text-green-400 font-medium">{recipientInfo.name}</p>
+                  {recipientInfo.isBroker ? (
+                    <svg className="w-4 h-4 text-primary-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className={`font-medium ${recipientInfo.isBroker ? 'text-primary-400' : 'text-green-400'}`}>
+                        {recipientInfo.name}
+                      </p>
+                      {recipientInfo.isBroker ? (
+                        <span className="px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded font-medium">
+                          Broker Account
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded font-medium">
+                          Platform User
+                        </span>
+                      )}
+                    </div>
                     {recipientInfo.email && (
-                      <p className="text-green-500/70 text-xs">{recipientInfo.email}</p>
-                    )}
-                    {recipientInfo.isBroker && (
-                      <span className="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded">
-                        Broker Account
-                      </span>
+                      <p className={`text-xs ${recipientInfo.isBroker ? 'text-primary-500/70' : 'text-green-500/70'}`}>
+                        {recipientInfo.email}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -410,17 +430,35 @@ export default function SendPage() {
 
           {/* Recipient Info */}
           {recipientInfo && (
-            <div className="bg-dark-800/30 rounded-xl p-4">
+            <div className={`rounded-xl p-4 ${
+              recipientInfo.isBroker 
+                ? 'bg-primary-500/10 border border-primary-500/20' 
+                : 'bg-green-500/10 border border-green-500/20'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-lg">
-                  {recipientInfo.name.charAt(0)}
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                  recipientInfo.isBroker
+                    ? 'bg-gradient-to-br from-primary-400 to-primary-600'
+                    : 'bg-gradient-to-br from-green-400 to-green-600'
+                }`}>
+                  {recipientInfo.isBroker ? (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  ) : (
+                    recipientInfo.name.charAt(0)
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-white font-medium">{recipientInfo.name}</p>
-                    {recipientInfo.isBroker && (
-                      <span className="px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded">
+                    {recipientInfo.isBroker ? (
+                      <span className="px-2 py-0.5 bg-primary-500/30 text-primary-300 text-xs rounded font-medium">
                         Broker
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded font-medium">
+                        Platform User
                       </span>
                     )}
                   </div>
@@ -441,6 +479,12 @@ export default function SendPage() {
               </span>
             </div>
             <div className="flex items-center justify-between">
+              <span className="text-dark-400">Transfer Type</span>
+              <span className={`text-sm font-medium ${recipientInfo?.isBroker ? 'text-primary-400' : 'text-green-400'}`}>
+                {recipientInfo?.isBroker ? 'To Broker' : 'Platform Transfer'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
               <span className="text-dark-400">Network</span>
               <span className="text-white">{selectedAsset.name} Network</span>
             </div>
@@ -452,12 +496,40 @@ export default function SendPage() {
               <span className="text-white">~${networkFee.toFixed(2)}</span>
             </div>
             <div className="flex items-center justify-between pt-3 border-t border-white/5">
-              <span className="text-dark-400">Total</span>
+              <span className="text-dark-400">Total Cost</span>
               <span className="text-white font-semibold">
                 ${(estimatedValue + networkFee).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
+
+          {/* Transfer Type Info */}
+          {recipientInfo && (
+            <div className={`p-3 rounded-lg text-sm ${
+              recipientInfo.isBroker 
+                ? 'bg-primary-500/5 border border-primary-500/20 text-primary-300' 
+                : 'bg-green-500/5 border border-green-500/20 text-green-300'
+            }`}>
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>
+                  {recipientInfo.isBroker ? (
+                    <>
+                      <strong>Broker Transfer:</strong> Funds will be sent to an external broker account. 
+                      Both databases will be updated and confirmation emails sent.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Instant Transfer:</strong> {recipientInfo.name} will receive the crypto instantly. 
+                      Both parties will receive confirmation emails.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {sendError && (
@@ -560,7 +632,17 @@ export default function SendPage() {
 
             <h3 className="text-2xl font-bold text-white mb-2">Transfer Successful!</h3>
             <p className="text-dark-400 mb-6">
-              You've successfully sent <span className="text-white font-semibold">{amount} {selectedAsset?.symbol}</span> to {recipientInfo?.name}
+              You've successfully sent <span className="text-white font-semibold">{amount} {selectedAsset?.symbol}</span> to{' '}
+              <span className="text-white font-semibold">{recipientInfo?.name}</span>
+              {recipientInfo?.isBroker ? (
+                <span className="block mt-1 text-primary-400 text-sm">
+                  (Broker Account - Funds transferred to external wallet)
+                </span>
+              ) : (
+                <span className="block mt-1 text-green-400 text-sm">
+                  (Platform User - Instant transfer completed)
+                </span>
+              )}
             </p>
 
             <div className="space-y-3 text-sm">
@@ -575,8 +657,18 @@ export default function SendPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-dark-800/50 rounded-lg">
+                <span className="text-dark-400">Fee</span>
+                <span className="text-white font-medium">${networkFee.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-dark-800/50 rounded-lg">
                 <span className="text-dark-400">Recipient</span>
                 <span className="text-white font-medium">{recipientInfo?.name}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-dark-800/50 rounded-lg">
+                <span className="text-dark-400">Type</span>
+                <span className={`font-medium ${recipientInfo?.isBroker ? 'text-primary-400' : 'text-green-400'}`}>
+                  {recipientInfo?.isBroker ? 'Broker Account' : 'Platform User'}
+                </span>
               </div>
             </div>
 

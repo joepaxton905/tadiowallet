@@ -29,38 +29,44 @@ export async function GET(request) {
 
     await connectDB()
 
-    // 1️⃣ Check in MAIN database first
-    const mainUser = await User.findOne({
-      $or: [
-        { 'wallets.btc.address': address },
-        { 'wallets.btc.legacyAddress': address },
-        { 'wallets.eth.address': address },
-        { 'wallets.usdt_trc20.address': address }
-      ]
-    })
+    // 1️⃣ Check in MAIN database first - Query Wallet collection
+    const mainWallet = await Wallet.findOne({ address: address })
 
-    if (mainUser) {
-      // Found in main database
-      let walletInfo = {}
+    if (mainWallet) {
+      // Found wallet in main database, get the user
+      const mainUser = await User.findById(mainWallet.userId)
       
-      if (mainUser.wallets.btc?.address === address || mainUser.wallets.btc?.legacyAddress === address) {
-        walletInfo = { symbol: 'BTC', currency: 'Bitcoin', network: 'Bitcoin Mainnet' }
-      } else if (mainUser.wallets.eth?.address === address) {
-        walletInfo = { symbol: 'ETH', currency: 'Ethereum', network: 'Ethereum Mainnet' }
-      } else if (mainUser.wallets.usdt_trc20?.address === address) {
-        walletInfo = { symbol: 'USDT', currency: 'Tether', network: 'Tron (TRC20)' }
-      }
-
-      return NextResponse.json({
-        success: true,
-        isValid: true,
-        recipient: {
-          name: mainUser.name,
-          address: address,
-          isBroker: false,
-          ...walletInfo
+      if (mainUser) {
+        const userName = mainUser.firstName ? `${mainUser.firstName} ${mainUser.lastName}` : mainUser.name || mainUser.email
+        
+        // Map symbol to full name
+        const assetNames = {
+          'BTC': { currency: 'Bitcoin', network: 'Bitcoin Mainnet' },
+          'ETH': { currency: 'Ethereum', network: 'Ethereum Mainnet' },
+          'USDT': { currency: 'Tether', network: 'ERC-20' },
+          'SOL': { currency: 'Solana', network: 'Solana Mainnet' },
+          'XRP': { currency: 'Ripple', network: 'XRP Ledger' },
+          'BNB': { currency: 'BNB', network: 'Binance Smart Chain' }
         }
-      })
+        
+        const walletInfo = assetNames[mainWallet.symbol] || { 
+          currency: mainWallet.symbol, 
+          network: `${mainWallet.symbol} Network` 
+        }
+
+        return NextResponse.json({
+          success: true,
+          isValid: true,
+          recipient: {
+            name: userName,
+            email: mainUser.email,
+            address: address,
+            isBroker: false,
+            symbol: mainWallet.symbol,
+            ...walletInfo
+          }
+        })
+      }
     }
 
     // 2️⃣ Check in BROKER database
@@ -221,29 +227,27 @@ export async function POST(request) {
       )
     }
 
-    // 🔍 Step 1: Check if recipient is in MAIN database
-    const mainRecipient = await User.findOne({
-      $or: [
-        { 'wallets.btc.address': recipientAddress },
-        { 'wallets.btc.legacyAddress': recipientAddress },
-        { 'wallets.eth.address': recipientAddress },
-        { 'wallets.usdt_trc20.address': recipientAddress }
-      ]
-    })
+    // 🔍 Step 1: Check if recipient is in MAIN database - Query Wallet collection
+    const recipientWallet = await Wallet.findOne({ address: recipientAddress })
 
-    if (mainRecipient) {
-      // ✅ MAIN → MAIN Transfer
-      console.log('💸 Processing MAIN → MAIN transfer')
-      return await processMainToMainTransfer({
-        sender,
-        senderWallet,
-        recipient: mainRecipient,
-        recipientAddress,
-        asset: assetSymbol,
-        amount,
-        notes,
-        price: currentMarketPrice
-      })
+    if (recipientWallet) {
+      // Found wallet in main database, get the user
+      const mainRecipient = await User.findById(recipientWallet.userId)
+      
+      if (mainRecipient) {
+        // ✅ MAIN → MAIN Transfer
+        console.log('💸 Processing MAIN → MAIN transfer')
+        return await processMainToMainTransfer({
+          sender,
+          senderWallet,
+          recipient: mainRecipient,
+          recipientAddress,
+          asset: assetSymbol,
+          amount,
+          notes,
+          price: currentMarketPrice
+        })
+      }
     }
 
     // 🔍 Step 2: Check if recipient is in BROKER database
