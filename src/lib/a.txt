@@ -1,0 +1,19 @@
+
+when a user is sending crypto to the trading broker, the broker is a company standing on its own and it has a name(which will be BROKER_COMPANY_NAME). the email  alert has to come from the brokers domain/email credentials. the email has to look like it is coming from the broker itself. i hope you understand my point.
+
+
+
+do not get creative and do not change anything else. just make it work.
+
+
+
+
+
+
+BROKER_COMPANY_NAME
+
+
+
+
+
+

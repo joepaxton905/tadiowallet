@@ -545,7 +545,8 @@ export async function POST(request) {
             asset: assetSymbol,
             assetName: getAssetName(assetSymbol),
             value: transactionValue,
-            senderAddress: senderWallet.address
+            senderAddress: senderWallet.address,
+            isBroker: true
           })
         } catch (emailError) {
           console.error('❌ Email error:', emailError)

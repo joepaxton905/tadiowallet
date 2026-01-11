@@ -5,7 +5,7 @@
 
 const nodemailer = require('nodemailer')
 
-// Email configuration from environment variables
+// Main Platform Email configuration
 const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.zoho.com'
 const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '465')
 const EMAIL_SECURE = process.env.EMAIL_SECURE !== 'false' // true for 465, false for other ports
@@ -13,11 +13,21 @@ const EMAIL_USER = process.env.EMAIL_USER
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD
 const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER
 const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'TadioWallet'
-const RECIEVER_COMPANY_NAME = process.env.NEXT_PUBLIC_RECIEVER_COMPANY_NAME || 'Quantummarkets'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-// Create reusable transporter
+// Broker Email configuration
+const BROKER_EMAIL_HOST = process.env.BROKER_EMAIL_HOST || 'smtp.zoho.com'
+const BROKER_EMAIL_PORT = parseInt(process.env.BROKER_EMAIL_PORT || '465')
+const BROKER_EMAIL_SECURE = process.env.BROKER_EMAIL_SECURE !== 'false'
+const BROKER_EMAIL_USER = process.env.BROKER_EMAIL_USER
+const BROKER_EMAIL_PASSWORD = process.env.BROKER_EMAIL_PASSWORD
+const BROKER_EMAIL_FROM = process.env.BROKER_EMAIL_FROM || process.env.BROKER_EMAIL_USER
+const BROKER_COMPANY_NAME = process.env.BROKER_COMPANY_NAME || 'Quantummarkets'
+const BROKER_APP_URL = process.env.BROKER_APP_URL || 'http://localhost:3000'
+
+// Create reusable transporters
 let transporter = null
+let brokerTransporter = null
 
 function getTransporter() {
   if (!transporter) {
@@ -43,14 +53,47 @@ function getTransporter() {
     // Verify connection
     transporter.verify((error, success) => {
       if (error) {
-        console.error('❌ Email transporter verification failed:', error)
+        console.error('❌ Main platform email transporter verification failed:', error)
       } else {
-        console.log('✅ Email server is ready to send messages')
+        console.log('✅ Main platform email server is ready to send messages')
       }
     })
   }
 
   return transporter
+}
+
+function getBrokerTransporter() {
+  if (!brokerTransporter) {
+    if (!BROKER_EMAIL_USER || !BROKER_EMAIL_PASSWORD) {
+      console.warn('⚠️ Broker email credentials not configured. Emails will be logged to console only.')
+      return null
+    }
+
+    brokerTransporter = nodemailer.createTransport({
+      host: BROKER_EMAIL_HOST,
+      port: BROKER_EMAIL_PORT,
+      secure: BROKER_EMAIL_SECURE,
+      auth: {
+        user: BROKER_EMAIL_USER,
+        pass: BROKER_EMAIL_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    })
+
+    // Verify connection
+    brokerTransporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ Broker email transporter verification failed:', error)
+      } else {
+        console.log('✅ Broker email server is ready to send messages')
+      }
+    })
+  }
+
+  return brokerTransporter
 }
 
 /**
@@ -60,13 +103,17 @@ function getTransporter() {
  * @param {string} options.subject - Email subject
  * @param {string} options.html - HTML content
  * @param {string} options.text - Plain text content (optional)
+ * @param {boolean} options.useBrokerEmail - Use broker email configuration (default: false)
  */
-async function sendEmail({ to, subject, html, text }) {
-  const transporter = getTransporter()
+async function sendEmail({ to, subject, html, text, useBrokerEmail = false }) {
+  const transporter = useBrokerEmail ? getBrokerTransporter() : getTransporter()
+  const companyName = useBrokerEmail ? BROKER_COMPANY_NAME : COMPANY_NAME
+  const emailFrom = useBrokerEmail ? BROKER_EMAIL_FROM : EMAIL_FROM
+  const appUrl = useBrokerEmail ? BROKER_APP_URL : APP_URL
 
   // If no transporter, log email instead of sending
   if (!transporter) {
-    console.log('📧 [EMAIL - Not Sent]', {
+    console.log(`📧 [EMAIL - Not Sent] ${useBrokerEmail ? '[BROKER]' : '[PLATFORM]'}`, {
       to,
       subject,
       html: html.substring(0, 100) + '...',
@@ -76,7 +123,7 @@ async function sendEmail({ to, subject, html, text }) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"${COMPANY_NAME}" <${EMAIL_FROM}>`,
+      from: `"${companyName}" <${emailFrom}>`,
       to,
       subject,
       text: text || '', // Plain text fallback
@@ -84,24 +131,24 @@ async function sendEmail({ to, subject, html, text }) {
       // Anti-spam headers
       headers: {
         'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        'X-Mailer': `${COMPANY_NAME} Notification System`,
+        'X-Mailer': `${companyName} Notification System`,
         'X-Priority': '1',
         'Importance': 'high',
         'X-MSMail-Priority': 'High',
-        'Reply-To': EMAIL_FROM,
-        'Return-Path': EMAIL_FROM,
+        'Reply-To': emailFrom,
+        'Return-Path': emailFrom,
         // List headers to avoid spam filters
-        'List-Unsubscribe': `<${APP_URL}/settings>`,
+        'List-Unsubscribe': `<${appUrl}/settings>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
       // Message priority
       priority: 'high',
     })
 
-    console.log('✅ Email sent successfully:', info.messageId)
+    console.log(`✅ Email sent successfully ${useBrokerEmail ? '[BROKER]' : '[PLATFORM]'}:`, info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
-    console.error('❌ Error sending email:', error)
+    console.error(`❌ Error sending email ${useBrokerEmail ? '[BROKER]' : '[PLATFORM]'}:`, error)
     throw error
   }
 }
@@ -119,8 +166,11 @@ async function sendTransferSentEmail({
   value,
   fee,
   recipientAddress,
+  isBrokerTransfer = false,
 }) {
   const subject = `Transfer Sent: ${amount} ${asset}`
+  const companyName = COMPANY_NAME
+  const appUrl = APP_URL
 
   const html = `
 <!DOCTYPE html>
@@ -139,7 +189,7 @@ async function sendTransferSentEmail({
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
               <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #ffffff;">Transfer Sent</h1>
-              <p style="margin: 10px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">${COMPANY_NAME}</p>
+              <p style="margin: 10px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">${companyName}</p>
             </td>
           </tr>
           
@@ -208,7 +258,7 @@ async function sendTransferSentEmail({
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 10px 0 30px 0;">
-                    <a href="${APP_URL}/dashboard/transactions" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    <a href="${appUrl}/dashboard/transactions" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                       View Transaction
                     </a>
                   </td>
@@ -225,7 +275,7 @@ async function sendTransferSentEmail({
           <tr>
             <td style="padding: 20px 30px; background-color: #0f1419; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.
+                © ${new Date().getFullYear()} ${companyName}. All rights reserved.
               </p>
               <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
                 This is an automated message. Please do not reply.
@@ -254,14 +304,14 @@ Fee: $${fee.toFixed(2)}
 Recipient: ${recipientName}
 To Address: ${recipientAddress}
 
-View your transaction: ${APP_URL}/dashboard/transactions
+View your transaction: ${appUrl}/dashboard/transactions
 
 If you did not make this transfer, please contact support immediately.
 
-© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.
+© ${new Date().getFullYear()} ${companyName}. All rights reserved.
   `
 
-  return sendEmail({ to: recipientEmail, subject, html, text })
+  return sendEmail({ to: recipientEmail, subject, html, text, useBrokerEmail: false })
 }
 
 /**
@@ -276,8 +326,11 @@ async function sendTransferReceivedEmail({
   assetName,
   value,
   senderAddress,
+  isBroker = false,
 }) {
   const subject = `Transfer Received: ${amount} ${asset}`
+  const companyName = isBroker ? BROKER_COMPANY_NAME : COMPANY_NAME
+  const appUrl = isBroker ? BROKER_APP_URL : APP_URL
 
   const html = `
 <!DOCTYPE html>
@@ -296,7 +349,7 @@ async function sendTransferReceivedEmail({
           <tr>
             <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
               <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #ffffff;">Transfer Received</h1>
-              <p style="margin: 10px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">${COMPANY_NAME}</p>
+              <p style="margin: 10px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">${companyName}</p>
             </td>
           </tr>
           
@@ -359,7 +412,7 @@ async function sendTransferReceivedEmail({
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 10px 0 30px 0;">
-                    <a href="${APP_URL}/dashboard" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    <a href="${appUrl}/dashboard" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                       View Balance
                     </a>
                   </td>
@@ -376,7 +429,7 @@ async function sendTransferReceivedEmail({
           <tr>
             <td style="padding: 20px 30px; background-color: #0f1419; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.
+                © ${new Date().getFullYear()} ${companyName}. All rights reserved.
               </p>
               <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
                 This is an automated message. Please do not reply.
@@ -404,14 +457,14 @@ USD Value: $${value.toFixed(2)}
 From: ${senderName}
 From Address: ${senderAddress}
 
-View your balance: ${APP_URL}/dashboard
+View your balance: ${appUrl}/dashboard
 
 Your balance has been updated automatically.
 
-© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.
+© ${new Date().getFullYear()} ${companyName}. All rights reserved.
   `
 
-  return sendEmail({ to: recipientEmail, subject, html, text })
+  return sendEmail({ to: recipientEmail, subject, html, text, useBrokerEmail: isBroker })
 }
 
 module.exports = {
