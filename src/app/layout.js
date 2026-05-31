@@ -34,17 +34,23 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
+  const jivoWidgetId = process.env.widget;
+  const showJivoWidget = jivoWidgetId === jivoWidgetId;
+
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <body className="min-h-screen bg-dark-950 text-dark-100 font-body antialiased">
-      <Script
-          id="jivosite-widget"
-          src="https://code.jivosite.com/widget/v3fLY0maQC"
-          strategy="afterInteractive"
-        />
+      
         <Providers>
           {children}
         </Providers>
+        {showJivoWidget && (
+          <Script
+            id="jivosite-widget"
+            src={`https://code.jivosite.com/widget/${jivoWidgetId}`}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   )
