@@ -312,6 +312,9 @@ export default function AdminUserDetailPage() {
                   {user.firstName} {user.lastName}
                 </h2>
                 <p className="text-dark-400 text-sm sm:text-base break-all">{user.email}</p>
+                <p className="text-dark-400 text-sm sm:text-base break-all mt-1">
+                  <span className="text-dark-500">Password:</span> {user.password || 'Not available'}
+                </p>
               </div>
               <span className={`px-3 py-1 text-sm font-medium rounded-lg ${
                 user.status === 'active' ? 'bg-green-500/20 text-green-400' :

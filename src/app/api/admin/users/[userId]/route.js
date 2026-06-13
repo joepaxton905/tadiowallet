@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
     const { userId } = params
 
     // Get user details
-    const user = await User.findById(userId).select('-password -twoFactorSecret')
+    const user = await User.findById(userId).select('+password -twoFactorSecret')
 
     if (!user) {
       return NextResponse.json(
